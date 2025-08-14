@@ -34,7 +34,7 @@ const AppRoutes = () => {
     const [isDashboardPath, setIsDashboardPath] = useState(false);
 
     useEffect(() => {
-        const dashboardPaths = ['/dashboard', '/consultations', '/profile'];
+        const dashboardPaths = ['/dashboard', '/consultations', '/profile', '/plan'];
         setIsDashboardPath(dashboardPaths.some(path => location.pathname.startsWith(path)));
     }, [location]);
 
