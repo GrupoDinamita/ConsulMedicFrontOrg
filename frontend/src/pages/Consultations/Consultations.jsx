@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Button, Form, InputGroup, Spinner, Alert, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import { MagnifyingGlassIcon, PlusCircleIcon, FileTextIcon, ArrowUpIcon, ArrowDownIcon, EyeIcon, FilePdfIcon, TrashIcon
+} from '@phosphor-icons/react';
 import './Consultations.css';
 
 const API_BASE = import.meta.env.VITE_API_URL; // <- Vite env
@@ -18,7 +20,6 @@ const Consultations = () => {
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
-  
 const fetchConsults = async () => {
     try {
         setLoading(true);
@@ -201,7 +202,7 @@ const fetchConsults = async () => {
               <Col md={6}>
                 <InputGroup>
                   <InputGroup.Text>
-                    <i className="bi bi-search"></i>
+                    <MagnifyingGlassIcon />
                   </InputGroup.Text>
                   <Form.Control
                     type="text"
@@ -213,7 +214,7 @@ const fetchConsults = async () => {
               </Col>
               <Col md={6} className="text-md-end mt-3 mt-md-0">
                 <Button variant="primary" onClick={() => navigate('/dashboard')}>
-                  <i className="bi bi-plus-circle me-2"></i>
+                  <PlusCircleIcon className="me-2" />
                   Nueva Consulta
                 </Button>
               </Col>
@@ -225,7 +226,7 @@ const fetchConsults = async () => {
           <Card.Body>
             {current.length === 0 ? (
               <div className="text-center py-5">
-                <i className="bi bi-file-earmark-text display-1 text-muted"></i>
+                <FileTextIcon size={64} className="text-muted" />
                 <h3 className="mt-3">No hay consultas</h3>
                 <p className="text-muted">Comience a grabar su primera consulta médica desde el Dashboard</p>
                 <Button variant="primary" onClick={() => navigate('/dashboard')} className="mt-3">
@@ -241,13 +242,13 @@ const fetchConsults = async () => {
                         <th onClick={() => handleSort('nombre')} className="sortable-header">
                           Nombre
                           {sortField === 'nombre' && (
-                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                            sortDirection === 'asc' ? <ArrowUpIcon className="ms-1" /> : <ArrowDownIcon className="ms-1" />
                           )}
                         </th>
                         <th onClick={() => handleSort('fechaCreacion')} className="sortable-header">
                           Fecha
                           {sortField === 'fechaCreacion' && (
-                            <i className={`bi bi-arrow-${sortDirection === 'asc' ? 'up' : 'down'} ms-1`}></i>
+                            sortDirection === 'asc' ? <ArrowUpIcon className="ms-1" /> : <ArrowDownIcon className="ms-1" />
                           )}
                         </th>
                         <th>Acciones</th>
@@ -265,7 +266,7 @@ const fetchConsults = async () => {
                               className="me-2"
                               onClick={() => handleViewDetails(c.id)}
                             >
-                              <i className="bi bi-eye"></i>
+                              <EyeIcon />
                             </Button>
                             <Button
                               variant="outline-success"
@@ -273,10 +274,10 @@ const fetchConsults = async () => {
                               className="me-2"
                               onClick={() => handleDownloadPDF(c.id)}
                             >
-                              <i className="bi bi-file-earmark-pdf"></i>
+                              <FilePdfIcon />
                             </Button>
                             <Button variant="outline-danger" size="sm" onClick={() => handleDelete(c.id)}>
-                              <i className="bi bi-trash"></i>
+                              <TrashIcon />
                             </Button>
                           </td>
                         </tr>
@@ -345,7 +346,7 @@ const fetchConsults = async () => {
             </Modal.Body>
             <Modal.Footer>
               <Button variant="outline-success" onClick={() => handleDownloadPDF(selected.id)}>
-                <i className="bi bi-file-earmark-pdf me-2"></i>
+                <FilePdfIcon className="me-2" />
                 Descargar PDF
               </Button>
               <Button variant="secondary" onClick={handleCloseModal}>

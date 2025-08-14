@@ -3,9 +3,13 @@ import { Navbar, Container, Nav, NavDropdown, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-    IconHeart, IconDashboard, IconJournal,
-    IconUser, IconGear, IconLogout
-} from '../../components/Icons';
+    HeartIcon,
+    GaugeIcon,
+    NotebookIcon,
+    UserCircleIcon,
+    GearSixIcon,
+    SignOutIcon
+} from '@phosphor-icons/react';
 import './Navbar.css';
 import './DashboardNavbar.css';
 
@@ -26,7 +30,7 @@ const DashboardNavbar = () => {
             <Container>
                 {/* Brand visible en móvil (en desktop uso el grid interno) */}
                 <Navbar.Brand as={Link} to="/dashboard" className="navitem-icon d-lg-none">
-                    <IconHeart size={22} weight="fill" />
+                    <HeartIcon size={22} weight="fill" />
                     <span className="brand-text">ConsulMedic</span>
                 </Navbar.Brand>
 
@@ -36,18 +40,18 @@ const DashboardNavbar = () => {
                     <div className="navbar-grid w-100">
                         {/* Izquierda: Brand (solo desktop) */}
                         <div className="grid-brand d-none d-lg-flex navitem-icon">
-                            <IconHeart size={22} weight="fill" />
+                            <HeartIcon size={22} weight="fill" />
                             <span className="brand-text">ConsulMedic</span>
                         </div>
 
                         {/* Centro: 3 botones centrados */}
                         <Nav className="grid-center align-items-center">
                             <Nav.Link as={Link} to="/dashboard" className="navitem-icon nav-typo">
-                                <IconDashboard size={20} />
+                                <GaugeIcon size={20} />
                                 <span>Dashboard</span>
                             </Nav.Link>
                             <Nav.Link as={Link} to="/consultations" className="navitem-icon nav-typo">
-                                <IconJournal size={20} />
+                                <NotebookIcon size={20} />
                                 <span>Mis Consultas</span>
                             </Nav.Link>
                             <Nav.Link as={Link} to="/plan" className="navitem-icon nav-typo">
@@ -64,18 +68,18 @@ const DashboardNavbar = () => {
                                     id="user-dropdown"
                                     title={
                                         <span className="navitem-icon nav-typo">
-                      <IconUser size={20} />
+                      <UserCircleIcon size={20} />
                       <span>{displayName}</span>
                     </span>
                                     }
                                 >
                                     <NavDropdown.Item as={Link} to="/profile" className="navitem-icon">
-                                        <IconGear size={18} />
+                                        <GearSixIcon size={18} />
                                         <span>Configuración</span>
                                     </NavDropdown.Item>
                                     <NavDropdown.Divider />
                                     <NavDropdown.Item onClick={handleLogout} className="navitem-icon">
-                                        <IconLogout size={18} />
+                                        <SignOutIcon size={18} />
                                         <span>Cerrar sesión</span>
                                     </NavDropdown.Item>
                                 </NavDropdown>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Container, Row, Col, Card, Button, Table } from 'react-bootstrap';
+import { CheckCircleIcon } from '@phosphor-icons/react';
 import './Pricing.css';
 
 const Pricing = () => {
@@ -82,7 +83,7 @@ const Pricing = () => {
                                     <ul className="features-list">
                                         {plan.features.map((feature, idx) => (
                                             <li key={idx}>
-                                                <i className="bi bi-check-circle-fill"></i>
+                                                <CheckCircleIcon weight="fill" />
                                                 {feature}
                                             </li>
                                         ))}
@@ -116,15 +117,15 @@ const Pricing = () => {
                                 <tr key={index}>
                                     <td>{feature.name}</td>
                                     <td>{typeof feature.essential === 'boolean' ?
-                                        (feature.essential ? <i className="bi bi-check-circle-fill text-success"></i> : '-') :
+                                        (feature.essential ? <CheckCircleIcon weight="fill" className="text-success" /> : '-') :
                                         feature.essential}
                                     </td>
                                     <td>{typeof feature.professional === 'boolean' ?
-                                        (feature.professional ? <i className="bi bi-check-circle-fill text-success"></i> : '-') :
+                                        (feature.professional ? <CheckCircleIcon weight="fill" className="text-success" /> : '-') :
                                         feature.professional}
                                     </td>
                                     <td>{typeof feature.premium === 'boolean' ?
-                                        (feature.premium ? <i className="bi bi-check-circle-fill text-success"></i> : '-') :
+                                        (feature.premium ? <CheckCircleIcon weight="fill" className="text-success" /> : '-') :
                                         feature.premium}
                                     </td>
                                 </tr>

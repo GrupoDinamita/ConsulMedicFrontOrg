@@ -1,6 +1,8 @@
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
+import { FacebookLogoIcon, TwitterLogoIcon, LinkedinLogoIcon, InstagramLogoIcon, YoutubeLogoIcon }
+    from '@phosphor-icons/react';
 import './Footer.css';
 
 const Footer = () => {
@@ -18,19 +20,19 @@ const Footer = () => {
                         </p>
                         <div className="social-links">
                             <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-facebook"></i>
+                                <FacebookLogoIcon size={24} />
                             </a>
                             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-twitter-x"></i>
+                                <TwitterLogoIcon size={24} />
                             </a>
                             <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-linkedin"></i>
+                                <LinkedinLogoIcon size={24} />
                             </a>
                             <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-instagram"></i>
+                                <InstagramLogoIcon size={24} />
                             </a>
                             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">
-                                <i className="bi bi-youtube"></i>
+                                <YoutubeLogoIcon size={24} />
                             </a>
                         </div>
                     </Col>
