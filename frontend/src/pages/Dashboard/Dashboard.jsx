@@ -3,8 +3,15 @@ import { Container, Row, Col, Card, Button, Alert, Form, Spinner } from 'react-b
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import {
-    IconMic, IconCpu, IconUpload, IconDictation, IconHistory, IconFolder, IconFolderPlus, IconPencil, IconTrash, IconSearch
-} from '../../components/Icons';
+    MicrophoneIcon,
+    CpuIcon,
+    UploadSimpleIcon,
+    ClockCounterClockwiseIcon,
+    FolderIcon,
+    FolderPlusIcon,
+    PencilIcon,
+    TrashIcon
+} from '@phosphor-icons/react';
 import API_BASE from '../../apiConfig';
 
 const Dashboard = () => {
@@ -31,20 +38,6 @@ const Dashboard = () => {
     const [selectedFolder, setSelectedFolder] = useState('inbox');
 
     const fileInputRef = useRef(null);
-
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    const callFinalize = async (summaryFileName) => {
-        const token = localStorage.getItem('token');
-        return fetch(`${API_BASE}/consults/finalize`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify(summaryFileName)
-        });
-    };
 
     const waitForFinalize = async (consultaId, baseFileName, recordingName, maxMinutes = 3) => {
         const token = localStorage.getItem('token');
@@ -76,48 +69,6 @@ const Dashboard = () => {
 
         throw new Error('Timeout esperando el resumen.');
     };
-
-
-    // Convierte WAV/MP3/M4A a WebM/Opus en el navegador (si no ya es WebM)
-    const ensureWebM = async (file) => {
-        const looksWebM = (file?.type || '').includes('webm') || /\.webm$/i.test(file?.name || '');
-        if (looksWebM) return file;
-
-        if (!window.MediaRecorder || !MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-            throw new Error('Este navegador no puede convertir a WebM. Sube un archivo .webm');
-        }
-
-        // 1) Decodificar a PCM
-        const arrayBuffer = await file.arrayBuffer();
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        const ctx = new AudioCtx();
-        const buffer = await ctx.decodeAudioData(arrayBuffer);
-
-        // 2) Reproducir el buffer hacia un destino de MediaStream y grabarlo como WebM/Opus
-        const dest = ctx.createMediaStreamDestination();
-        const src = ctx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(dest);
-
-        const chunks = [];
-        const rec = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 128000 });
-        rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-        const stopped = new Promise(res => { rec.onstop = res; });
-
-        rec.start(100);
-        src.start();
-
-        const stopAfter = Math.ceil(buffer.duration * 1000) + 120; // margen
-        setTimeout(() => { if (rec.state !== 'inactive') rec.stop(); }, stopAfter);
-        await stopped;
-
-        try { src.disconnect(); dest.disconnect(); ctx.close(); } catch {}
-
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const base = (file.name || 'audio').replace(/\.[^/.]+$/, '') || 'audio';
-        return new File([blob], `${base}.webm`, { type: 'audio/webm' });
-    };
-
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -383,7 +334,7 @@ const Dashboard = () => {
                 <div className="sidebar-header">
                     <h6>Carpetas</h6>
                     <Button variant="link" className="p-0" onClick={handleAddFolder} title="Nueva carpeta">
-                        <IconFolderPlus size={18} />
+                        <FolderPlusIcon size={18} />
                     </Button>
                 </div>
 
@@ -395,15 +346,15 @@ const Dashboard = () => {
                             onClick={() => setSelectedFolder(f.id)}
                         >
                             <div className="d-flex align-items-center gap-2">
-                                <IconFolder size={18} />
+                                <FolderIcon size={18} />
                                 <span>{f.name}</span>
                             </div>
                             <div className="folder-actions">
                                 <Button variant="link" className="p-0 me-2" onClick={(e)=>{e.stopPropagation();handleRenameFolder(f.id);}} title="Renombrar">
-                                    <IconPencil size={16} />
+                                    <PencilIcon size={16} />
                                 </Button>
                                 <Button variant="link" className="p-0" onClick={(e)=>{e.stopPropagation();handleDeleteFolder(f.id);}} title="Eliminar">
-                                    <IconTrash size={16} />
+                                    <TrashIcon size={16} />
                                 </Button>
                             </div>
                         </div>
@@ -420,7 +371,7 @@ const Dashboard = () => {
                                 onClick={() => handleViewRecording(r._id)}
                                 title={r.name}
                             >
-                                <IconHistory size={16} />
+                                <ClockCounterClockwiseIcon size={16} />
                                 <span className="text-truncate">{r.name}</span>
                             </button>
                         ))}
@@ -441,13 +392,13 @@ const Dashboard = () => {
                 {}
                 <div className="quick-actions">
                     <button className="action-card action-upload theme-turquoise-deep" onClick={handleClickUpload} disabled={processingAudio}>
-                        <IconUpload size={22} />
+                        <UploadSimpleIcon size={22} />
                         <span>{processingAudio ? 'Procesando…' : 'Subir archivo'}</span>
                         <input ref={fileInputRef} onChange={handleUploadFileChange} type="file" accept="audio/*,video/*,.wav,.mp3,.m4a,.webm" hidden />
                     </button>
 
                     <button className="action-card action-mic  theme-turquoise-deep" onClick={startMicFlow} disabled={processingAudio} title="Grabar consulta (micrófono)">
-                        <IconMic size={22} />
+                        <MicrophoneIcon size={22} />
                         <span>Grabar consulta (micrófono)</span>
                     </button>
                 </div>
@@ -520,7 +471,7 @@ const Dashboard = () => {
                                             <>
                                                 {!isRecording ? (
                                                     <button className="btn btn-primary" onClick={handleStartRecording} disabled={processingAudio}>
-                                                        <span className="me-2"><IconMic /></span>
+                                                        <span className="me-2"><MicrophoneIcon /></span>
                                                         Iniciar grabación
                                                     </button>
                                                 ) : (
@@ -542,7 +493,7 @@ const Dashboard = () => {
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <span className="me-2"><IconCpu /></span>
+                                                                <span className="me-2"><CpuIcon /></span>
                                                                 Procesar audio
                                                             </>
                                                         )}
