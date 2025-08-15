@@ -24,7 +24,6 @@ const AnimatedNumber = ({ value }) => {
 };
 
 const Profile = () => {
-    const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userData, setUserData] = useState({
@@ -36,7 +35,7 @@ const Profile = () => {
         confirmPassword: ''
     });
     const [loading, setLoading] = useState(true);
-    const [updating, setUpdating] = useState(false);
+    const [setUpdating] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [stats, setStats] = useState({
@@ -92,55 +91,6 @@ const Profile = () => {
 
         fetchUserData();
     }, []);
-
-
-    const handlePasswordUpdate = async (e) => {
-        e.preventDefault();
-        setError('');
-        setSuccess('');
-        setUpdating(true);
-
-        if (userData.newPassword !== userData.confirmPassword) {
-            setError('Las contraseñas no coinciden');
-            setUpdating(false);
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('No se encontró la sesión del usuario');
-
-            const response = await fetch(`${API_BASE}/user/change-password`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    currentPassword: userData.currentPassword,
-                    newPassword: userData.newPassword
-                })
-            });
-
-            if (response.ok) {
-                setSuccess('Contraseña actualizada correctamente');
-                setUserData({
-                    ...userData,
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                });
-            } else {
-                const text = await response.text();
-                throw new Error(text || 'Error al actualizar la contraseña');
-            }
-        } catch (error) {
-            console.error('Error al actualizar contraseña:', error);
-            setError(error.message || 'Error al actualizar la contraseña');
-        } finally {
-            setUpdating(false);
-        }
-    };
 
     if (loading) {
         return (
