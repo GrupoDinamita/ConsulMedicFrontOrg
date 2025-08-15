@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
-import { useAuth } from '../../context/AuthContext';
 import API_BASE from '../../apiConfig';
 import './Profile.css'; 
 import { motion, AnimatePresence, animate } from "motion/react";
@@ -35,9 +34,8 @@ const Profile = () => {
         confirmPassword: ''
     });
     const [loading, setLoading] = useState(true);
-    const [setUpdating] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [success] = useState('');
     const [stats, setStats] = useState({
         totalConsultas: 0,
         totalTranscripciones: 0,
