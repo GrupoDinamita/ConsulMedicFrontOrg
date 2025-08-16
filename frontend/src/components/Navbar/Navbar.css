@@ -68,9 +68,67 @@
         padding: 1rem 0;
     }
 }
-/* Navbar: tamaño visual uniforme para íconos */
-.dashboard-navbar .icon,
-.dashboard-navbar svg {
-    width: 18px;
-    height: 18px;
+.site-navbar {
+    transition: background-color .25s ease, box-shadow .25s ease, color .25s ease;
+    backdrop-filter: saturate(120%) blur(0px);
+}
+
+.navbar--transparent { background: transparent; box-shadow: none; }
+.navbar--transparent .navbar-nav .nav-link,
+.navbar--transparent .brand { color: #ffffff !important; }
+.navbar--transparent .navbar-toggler { filter: invert(1) grayscale(100%); }
+
+.navbar--solid { background: #ffffff; box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.navbar--solid .navbar-nav .nav-link,
+.navbar--solid .brand { color: #0f172a !important; }
+
+/* ⬇️ Logo */
+.brand-logo { height: 27px; width: auto; margin-right: .5rem; vertical-align: -2px; }
+.brand-text { font-weight: 700; letter-spacing: .2px; }
+
+/* ⬇️ Botones siempre con la MISMA caja */
+.btn-auth{
+    padding: .5rem 1rem;        /* fijo */
+    line-height: 1.2;           /* fijo */
+    font-weight: 600;
+    border-radius: 10px;
+    border-width: 1px;          /* fijo */
+    font-size: 0.95rem;         /* fijo */
+}
+
+/* Estados de color, sin cambiar medidas */
+.navbar--transparent .btn-login{
+    background: transparent;
+    color: #fff;
+    border-color: rgba(255,255,255,.85);
+}
+.navbar--transparent .btn-cta{
+    background: #fff;
+    color: #0f172a;
+    border-color: #fff;
+}
+
+.navbar--solid .btn-login{
+    background: transparent;
+    color: #0f172a;
+    border-color: #0ea5e9;
+}
+.navbar--solid .btn-cta{
+    background: #0056b3;
+    color: #fff;
+    border-color: #0ea5e9;
+}
+:root{
+    --nav-divider: rgba(0,0,0,.14); /* súbelo a .18 si la quieres un poco más marcada */
+}
+
+.navbar--transparent{
+    background: transparent;
+    box-shadow: none; /* sin línea cuando está transparente */
+}
+
+.navbar--solid{
+    box-shadow:
+            0 4px 16px rgba(0,0,0,.06),
+            inset 0 -1px 0 rgba(0,0,0,.28);
 }

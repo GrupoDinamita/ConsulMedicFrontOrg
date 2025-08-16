@@ -7,28 +7,22 @@ import './Auth.css';
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('')
+    const [error, setError] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
     const { login } = useAuth();
 
-    // Verifica si viene de la página de prueba gratuita
-    const isFromFreeTrial = location.state?.fromFreeTrial;
-    const redirectPath = location.state?.from?.pathname || (isFromFreeTrial ? '/free-trial-setup' : '/dashboard');
+    // Redirección post-login: vuelve a la ruta previa (si existe) o al dashboard
+    const redirectPath = location.state?.from?.pathname || '/dashboard';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        console.log('Intentando iniciar sesión con:', email);
-
         try {
             const result = await login(email, password);
-            console.log('Resultado del login:', result);
 
             if (result.success) {
-                console.log('Login exitoso, redirigiendo a:', redirectPath);
-                // Establecemos un timeout para asegurarnos que el estado se actualice
                 setTimeout(() => {
                     navigate(redirectPath, { replace: true });
                 }, 100);
@@ -36,7 +30,6 @@ const Login = () => {
                 setError(result.error || 'Error al iniciar sesión. Por favor, verifica tus credenciales.');
             }
         } catch (err) {
-            console.error('Error en login:', err);
             setError('Error al iniciar sesión. Por favor, verifica tus credenciales.');
         }
     };
@@ -47,9 +40,7 @@ const Login = () => {
                 <div className="auth-content">
                     <Card className="auth-card">
                         <Card.Body>
-                            <h2 className="text-center mb-4">
-                                {isFromFreeTrial ? 'Inicia sesión para tu prueba gratuita' : 'Iniciar Sesión'}
-                            </h2>
+                            <h2 className="text-center mb-4">Iniciar Sesión</h2>
                             {error && <Alert variant="danger">{error}</Alert>}
                             <Form onSubmit={handleSubmit}>
                                 <Form.Group className="mb-3">

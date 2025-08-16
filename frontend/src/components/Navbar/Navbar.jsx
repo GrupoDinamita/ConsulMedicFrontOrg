@@ -1,48 +1,53 @@
-import React from 'react';
-import { Navbar, Nav, Button } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Link, useLocation } from 'react-router-dom';
 import './Navbar.css';
-import logo from '../../assets/logo.png';
 
-const NavigationBar = () => {
-    const navigate = useNavigate();
+// ⬇️ Ajusta esta ruta a tu logo real
+import logo from '../../assets/logo_transparent_trimmed.png';
 
-    const handleFreeTrial = () => {
-        navigate('/login', { state: { fromFreeTrial: true } });
-    };
+
+const NavigationBar = ({ transparentOnTop = false }) => {
+    const [scrolled, setScrolled] = useState(false);
+    const location = useLocation();
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 20);
+        onScroll();
+        window.addEventListener('scroll', onScroll);
+        return () => window.removeEventListener('scroll', onScroll);
+    }, [location.pathname]);
+
+    const useTransparent = transparentOnTop && !scrolled;
 
     return (
-        <Navbar bg="white" expand="lg" fixed="top" className="custom-navbar">
-            <Navbar.Brand as={Link} to="/" className="ms-4">
-                <img
-                    src={logo}
-                    height="30"
-                    className="d-inline-block align-top"
-                    alt="ConsulMedic logo"
-                />ConsulMedic
-            </Navbar.Brand>
-            <Navbar.Toggle aria-controls="basic-navbar-nav" />
-            <Navbar.Collapse id="basic-navbar-nav">
-                <Nav className="ms-auto me-4">
-                    <Nav.Link as={Link} to="/pricing">Precios</Nav.Link>
-                    <Nav.Link as={Link} to="/contact">Contacto</Nav.Link>
-                    <Nav.Link as={Link} to="/about">Sobre nosotros</Nav.Link>
-                    <Button
-                        variant="outline-primary"
-                        className="me-2"
-                        onClick={handleFreeTrial}
-                    >
-                        Prueba Gratis
-                    </Button>
-                    <Button
-                        variant="primary"
-                        as={Link}
-                        to="/register"
-                    >
-                        Registrarse
-                    </Button>
-                </Nav>
-            </Navbar.Collapse>
+        <Navbar expand="lg" fixed="top"
+                className={`site-navbar ${useTransparent ? 'navbar--transparent' : 'navbar--solid'}`}>
+            <Container>
+                <Navbar.Brand as={Link} to="/" className="brand">
+                    <img src={logo} alt="ConsulMedic" className="brand-logo" />
+                    <span className="brand-text">ConsulMedic</span>
+                </Navbar.Brand>
+
+                <Navbar.Toggle aria-controls="nav" />
+                <Navbar.Collapse id="nav">
+                    <Nav className="me-auto">
+                        <Nav.Link as={Link} to="/pricing">Precios</Nav.Link>
+                        <Nav.Link as={Link} to="/contact">Contacto</Nav.Link>
+                        <Nav.Link as={Link} to="/about">Sobre nosotros</Nav.Link>
+                    </Nav>
+
+                    {/* ⬇️ Mismo tamaño SIEMPRE */}
+                    <div className="d-flex gap-2">
+                        <Button as={Link} to="/login" className="btn-auth btn-login">
+                            Iniciar sesión
+                        </Button>
+                        <Button as={Link} to="/register" className="btn-auth btn-cta">
+                            Registrarse
+                        </Button>
+                    </div>
+                </Navbar.Collapse>
+            </Container>
         </Navbar>
     );
 };

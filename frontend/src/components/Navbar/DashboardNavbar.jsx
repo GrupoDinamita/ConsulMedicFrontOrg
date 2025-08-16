@@ -1,9 +1,17 @@
 import React from 'react';
-import { Navbar, Container, Nav, NavDropdown } from 'react-bootstrap';
+import { Navbar, Container, Nav, NavDropdown, Badge } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { IconHeart, IconDashboard, IconJournal, IconUser, IconGear, IconLogout } from '../../components/Icons';
+import {
+    HeartIcon,
+    GaugeIcon,
+    NotebookIcon,
+    UserCircleIcon,
+    GearSixIcon,
+    SignOutIcon
+} from '@phosphor-icons/react';
 import './Navbar.css';
+import './DashboardNavbar.css';
 
 const DashboardNavbar = () => {
     const { currentUser, logout } = useAuth();
@@ -14,46 +22,70 @@ const DashboardNavbar = () => {
         navigate('/');
     };
 
+    const planName = currentUser?.planName || currentUser?.plan || 'Gratis';
+    const displayName = currentUser?.nombre || 'Usuario';
+
     return (
         <Navbar bg="primary" variant="dark" expand="lg" className="dashboard-navbar">
             <Container>
-                <Navbar.Brand as={Link} to="/dashboard">
-                    <span className="me-2"><IconHeart /></span>
-                    ConsulMedic
+                {/* Brand visible en móvil (en desktop uso el grid interno) */}
+                <Navbar.Brand as={Link} to="/dashboard" className="navitem-icon d-lg-none">
+                    <HeartIcon size={22} weight="fill" />
+                    <span className="brand-text">ConsulMedic</span>
                 </Navbar.Brand>
+
                 <Navbar.Toggle aria-controls="navbar-nav" />
-                <Navbar.Collapse id="navbar-nav">
-                    <Nav className="me-auto">
-                        <Nav.Link as={Link} to="/dashboard">
-                            <span className="me-1"><IconDashboard /></span> Dashboard
-                        </Nav.Link>
-                        <Nav.Link as={Link} to="/consultations">
-                            <span className="me-1"><IconJournal /></span> Mis Consultas
-                        </Nav.Link>
-                    </Nav>
-                    <Nav>
-                        {currentUser && (
-                            <NavDropdown 
-                                title={
-                                    <span>
-                                        <span className="me-1"><IconUser /></span>
-                                        {currentUser.nombre || 'Usuario'}
-                                    </span>
-                                } 
-                                id="user-dropdown"
-                            >
-                                <NavDropdown.Item as={Link} to="/profile">
-                                    <span className="me-2"><IconGear /></span>
-                                    Configuración
-                                </NavDropdown.Item>
-                                <NavDropdown.Divider />
-                                <NavDropdown.Item onClick={handleLogout}>
-                                    <span className="me-2"><IconLogout /></span>
-                                    Cerrar Sesión
-                                </NavDropdown.Item>
-                            </NavDropdown>
-                        )}
-                    </Nav>
+                <Navbar.Collapse id="navbar-nav" className="w-100">
+                    {/* Grid de 3 columnas en desktop para simetría perfecta */}
+                    <div className="navbar-grid w-100">
+                        {/* Izquierda: Brand (solo desktop) */}
+                        <div className="grid-brand d-none d-lg-flex navitem-icon">
+                            <HeartIcon size={22} weight="fill" />
+                            <span className="brand-text">ConsulMedic</span>
+                        </div>
+
+                        {/* Centro: 3 botones centrados */}
+                        <Nav className="grid-center align-items-center">
+                            <Nav.Link as={Link} to="/dashboard" className="navitem-icon nav-typo">
+                                <GaugeIcon size={20} />
+                                <span>Dashboard</span>
+                            </Nav.Link>
+                            <Nav.Link as={Link} to="/consultations" className="navitem-icon nav-typo">
+                                <NotebookIcon size={20} />
+                                <span>Mis Consultas</span>
+                            </Nav.Link>
+                            <Nav.Link as={Link} to="/plan" className="navitem-icon nav-typo">
+                                <span>Mi plan</span>
+                                <Badge bg="light" text="dark" className="ms-2">{planName}</Badge>
+                            </Nav.Link>
+                        </Nav>
+
+                        {/* Derecha: usuario */}
+                        <Nav className="grid-right align-items-center">
+                            {currentUser && (
+                                <NavDropdown
+                                    align="end"
+                                    id="user-dropdown"
+                                    title={
+                                        <span className="navitem-icon nav-typo">
+                      <UserCircleIcon size={20} />
+                      <span>{displayName}</span>
+                    </span>
+                                    }
+                                >
+                                    <NavDropdown.Item as={Link} to="/profile" className="navitem-icon">
+                                        <GearSixIcon size={18} />
+                                        <span>Configuración</span>
+                                    </NavDropdown.Item>
+                                    <NavDropdown.Divider />
+                                    <NavDropdown.Item onClick={handleLogout} className="navitem-icon">
+                                        <SignOutIcon size={18} />
+                                        <span>Cerrar sesión</span>
+                                    </NavDropdown.Item>
+                                </NavDropdown>
+                            )}
+                        </Nav>
+                    </div>
                 </Navbar.Collapse>
             </Container>
         </Navbar>

@@ -1,0 +1,111 @@
+:root{
+    --nav-brand-color: #EAF6FF;   /* suave sobre azul */
+    --nav-brand-hover: #FFFFFF;
+}
+
+.dashboard-navbar .navbar-brand,
+.dashboard-navbar .grid-brand{
+    color: var(--nav-brand-color) !important;
+}
+
+.dashboard-navbar .navbar-brand .brand-text,
+.dashboard-navbar .grid-brand .brand-text,
+.dashboard-navbar .navbar-brand svg,
+.dashboard-navbar .grid-brand svg{
+    color: inherit;            /* texto e ícono toman el mismo color */
+    fill: currentColor;        /* por si el ícono usa fill */
+}
+
+.dashboard-navbar .navbar-brand:hover,
+.dashboard-navbar .grid-brand:hover{
+    color: var(--nav-brand-hover) !important;
+    text-shadow: 0 0 8px rgba(255,255,255,.15); /* sutil para legibilidad */
+}
+/* Tamaños de iconos coherentes */
+.dashboard-navbar .icon,
+.dashboard-navbar svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Caja estable y sombra suave */
+.dashboard-navbar {
+    box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    min-height: 60px;
+}
+
+/* Tipografía más legible */
+.brand-text {
+    font-weight: 700;
+    letter-spacing: .2px;
+}
+.nav-typo span {
+    font-weight: 600;
+    letter-spacing: .2px;
+}
+.dashboard-navbar .nav-link {
+    color: rgba(255,255,255,.95);
+}
+.dashboard-navbar .nav-link:hover,
+.dashboard-navbar .dropdown-toggle:hover {
+    color: #fff;
+}
+
+/* Alineación vertical perfecta en brand, links y dropdown */
+.dashboard-navbar .navbar-brand,
+.dashboard-navbar .nav-link,
+.dashboard-navbar .dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+/* Los svg quedan centrados respecto al texto */
+.dashboard-navbar .navbar-brand svg,
+.dashboard-navbar .nav-link svg,
+.dashboard-navbar .dropdown-toggle svg,
+.dashboard-navbar .dropdown-item svg {
+    vertical-align: middle;
+    display: block; /* quita el baseline raro */
+}
+
+/* Área de click un poquito mayor */
+.dashboard-navbar .nav-link,
+.dashboard-navbar .dropdown-toggle {
+    padding-top: .6rem;
+    padding-bottom: .6rem;
+}
+
+/* ----- GRID para simetría (lg+) ----- */
+.navbar-grid {
+    /* en mobile el Collapse apila; en lg aplico grid */
+}
+@media (min-width: 992px) {
+    .navbar-grid {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr; /* izq - centro - der */
+        align-items: center;
+        gap: 8px;
+    }
+    .navbar-grid .grid-brand  { justify-self: start; }
+    .navbar-grid .grid-center { justify-self: center; display: flex; gap: .5rem; }
+    .navbar-grid .grid-right  { justify-self: end; }
+}
+
+/* Espaciado lateral agradable en escritorio */
+@media (min-width: 992px) {
+    .dashboard-navbar .navbar-nav .nav-link {
+        padding-right: .75rem;
+        padding-left: .75rem;
+    }
+}
+
+/* Dropdown: mismo estilo del resto */
+.navitem-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+}

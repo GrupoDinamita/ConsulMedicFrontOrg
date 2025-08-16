@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { useAuth } from '../../context/AuthContext';
+import { Container, Row, Col, Card, Button, Alert, Spinner } from 'react-bootstrap';
 import API_BASE from '../../apiConfig';
 import './Profile.css'; 
 import { motion, AnimatePresence, animate } from "motion/react";
 import { useNavigate } from 'react-router-dom';
+import { HeartIcon, FileTextIcon, ClockCounterClockwiseIcon, CheckCircleIcon, UserGearIcon, LockSimpleIcon,
+    GearIcon } from '@phosphor-icons/react';
 
 // Componente para animar números
 const AnimatedNumber = ({ value }) => {
@@ -22,7 +23,6 @@ const AnimatedNumber = ({ value }) => {
 };
 
 const Profile = () => {
-    const { currentUser } = useAuth();
     const navigate = useNavigate();
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [userData, setUserData] = useState({
@@ -34,9 +34,8 @@ const Profile = () => {
         confirmPassword: ''
     });
     const [loading, setLoading] = useState(true);
-    const [updating, setUpdating] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [success] = useState('');
     const [stats, setStats] = useState({
         totalConsultas: 0,
         totalTranscripciones: 0,
@@ -91,56 +90,6 @@ const Profile = () => {
         fetchUserData();
     }, []);
 
-
-
-    const handlePasswordUpdate = async (e) => {
-        e.preventDefault();
-        setError('');
-        setSuccess('');
-        setUpdating(true);
-
-        if (userData.newPassword !== userData.confirmPassword) {
-            setError('Las contraseñas no coinciden');
-            setUpdating(false);
-            return;
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) throw new Error('No se encontró la sesión del usuario');
-
-            const response = await fetch(`${API_BASE}/user/change-password`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    currentPassword: userData.currentPassword,
-                    newPassword: userData.newPassword
-                })
-            });
-
-            if (response.ok) {
-                setSuccess('Contraseña actualizada correctamente');
-                setUserData({
-                    ...userData,
-                    currentPassword: '',
-                    newPassword: '',
-                    confirmPassword: ''
-                });
-            } else {
-                const text = await response.text();
-                throw new Error(text || 'Error al actualizar la contraseña');
-            }
-        } catch (error) {
-            console.error('Error al actualizar contraseña:', error);
-            setError(error.message || 'Error al actualizar la contraseña');
-        } finally {
-            setUpdating(false);
-        }
-    };
-
     if (loading) {
         return (
             <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
@@ -158,7 +107,7 @@ const Profile = () => {
                     </Col>
                     <Col className="text-end">
                         <Button variant="outline-primary" onClick={() => setDrawerOpen(true)}>
-                            ⚙ Configuración
+                            <GearIcon /> Configuración
                         </Button>
                     </Col>
                 </Row>
@@ -172,7 +121,7 @@ const Profile = () => {
                             <Card.Header><h3>Estadísticas</h3></Card.Header>
                             <Card.Body>
                                 <div className="stats-item">
-                                    <div className="stats-icon"><i className="bi bi-file-earmark-medical"></i></div>
+                                    <div className="stats-icon"><HeartIcon /></div>
                                     <div className="stats-info">
                                         <AnimatedNumber value={stats.totalConsultas} />
                                         <p>Consultas Totales</p>
@@ -180,7 +129,7 @@ const Profile = () => {
                                 </div>
 
                                 <div className="stats-item">
-                                    <div className="stats-icon"><i className="bi bi-file-text"></i></div>
+                                    <div className="stats-icon"><FileTextIcon /></div>
                                     <div className="stats-info">
                                         <AnimatedNumber value={stats.totalTranscripciones} />
                                         <p>Transcripciones</p>
@@ -188,7 +137,7 @@ const Profile = () => {
                                 </div>
 
                                 <div className="stats-item">
-                                    <div className="stats-icon"><i className="bi bi-clock-history"></i></div>
+                                    <div className="stats-icon"><ClockCounterClockwiseIcon /></div>
                                     <div className="stats-info">
                                         <AnimatedNumber value={stats.tiempoAhorrado} /> hrs
                                         <p>Tiempo Ahorrado</p>
@@ -209,10 +158,10 @@ const Profile = () => {
                                     <div className="mt-3">
                                         <h5>Características:</h5>
                                         <ul className="plan-features">
-                                            <li><i className="bi bi-check-circle-fill"></i> Transcripciones ilimitadas</li>
-                                            <li><i className="bi bi-check-circle-fill"></i> Resúmenes ilimitados</li>
-                                            <li><i className="bi bi-check-circle-fill"></i> Exportación PDF/Word</li>
-                                            <li><i className="bi bi-check-circle-fill"></i> Soporte prioritario</li>
+                                            <li><CheckCircleIcon weight="fill" /> Transcripciones ilimitadas</li>
+                                            <li><CheckCircleIcon weight="fill" /> Resúmenes ilimitados</li>
+                                            <li><CheckCircleIcon weight="fill" /> Exportación PDF/Word</li>
+                                            <li><CheckCircleIcon weight="fill" /> Soporte prioritario</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -261,7 +210,7 @@ const Profile = () => {
                                         className="drawer-option"
                                         onClick={() => { setDrawerOpen(false); navigate('/profile/edit'); }}
                                     >
-                                        <i className="bi bi-person-gear me-2"></i> Actualizar Perfil
+                                        <UserGearIcon className="me-2" /> Actualizar Perfil
                                     </motion.button>
 
                                     <motion.button
@@ -269,7 +218,7 @@ const Profile = () => {
                                         className="drawer-option"
                                         onClick={() => { setDrawerOpen(false); navigate('/profile/change-password'); }}
                                     >
-                                        <i className="bi bi-shield-lock me-2"></i> Cambiar Contraseña
+                                        <LockSimpleIcon className="me-2" /> Cambiar Contraseña
                                     </motion.button>
 
                                     <motion.button
@@ -277,7 +226,7 @@ const Profile = () => {
                                         className="drawer-option"
                                         onClick={() => { setDrawerOpen(false); navigate('/profile/settings');}}
                                     >
-                                        <i className="bi bi-gear me-2"></i> Preferencias
+                                        <GearIcon className="me-2" /> Preferencias
                                     </motion.button>
                                 </div>
 

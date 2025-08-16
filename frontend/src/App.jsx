@@ -19,7 +19,6 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
-import FreeTrialSetup from './pages/FreeTrial/FreeTrialSetup';
 import Dashboard from './pages/Dashboard/Dashboard';
 import ProtectedRoute from './pages/ProtectedRoute';
 import Profile from './pages/UserProfile/Profile';
@@ -28,29 +27,27 @@ import { AuthProvider } from './context/AuthContext';
 import EditProfile from "./pages/EditProfile/EditProfile";
 import ChangePassword from "./pages/ChangePassword/ChangePassword";
 import ProfileSettings from "./pages/ProfileSettings/ProfileSettings";
+import Plan from "./pages/Plan/Plan";
 
 const AppRoutes = () => {
     const location = useLocation();
     const [isDashboardPath, setIsDashboardPath] = useState(false);
 
     useEffect(() => {
-        const dashboardPaths = [
-            '/dashboard', 
-            '/consultations', 
-            '/profile',
-            '/free-trial-setup'
-        ];
-
-        setIsDashboardPath(dashboardPaths.some(path => 
-            location.pathname.startsWith(path)));
+        const dashboardPaths = ['/dashboard', '/consultations', '/profile', '/plan'];
+        setIsDashboardPath(dashboardPaths.some(path => location.pathname.startsWith(path)));
     }, [location]);
+
+    const isHome = location.pathname === '/'; // ← NUEVO
 
     return (
         <div className="App">
-            {isDashboardPath ? <DashboardNavbar /> : <NavigationBar />}
-            <div className="main-content">
+            {/* ← Pasamos la prop para que el Navbar sea transparente en el home */}
+            {isDashboardPath ? <DashboardNavbar /> : <NavigationBar transparentOnTop={isHome} />}
+
+            {/* ← Quitamos margen superior solo en home para que el hero quede “debajo” del navbar */}
+            <div className={`main-content ${isHome ? 'no-top' : ''}`}>
                 <Routes>
-                    {/* Rutas públicas */}
                     <Route path="/" element={
                         <>
                             <Hero />
@@ -68,15 +65,14 @@ const AppRoutes = () => {
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-                    {/* Rutas protegidas */}
                     <Route element={<ProtectedRoute />}>
                         <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/free-trial-setup" element={<FreeTrialSetup />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/consultations" element={<Consultations />} />
                         <Route path="/profile/edit" element={<EditProfile />} />
                         <Route path="/profile/change-password" element={<ChangePassword />} />
                         <Route path="/profile/settings" element={<ProfileSettings />} />
+                        <Route path="/plan" element={<Plan />} />
                     </Route>
                 </Routes>
             </div>

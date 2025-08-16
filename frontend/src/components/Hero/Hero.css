@@ -1,10 +1,9 @@
-/* Hero.css */
-
 .hero-section {
-    background: linear-gradient(135deg, #003366 0%, #004080 100%);
-    color: white;
     position: relative;
-    overflow: hidden;
+    min-height: 100vh;                 /* full pantalla */
+    display: flex;
+    align-items: center;
+    overflow: clip;
 }
 
 /* Reemplazamos el patrón SVG con un efecto de gradiente más elaborado */
@@ -107,3 +106,80 @@
 .feature-card:hover::before {
     left: 100%;
 }
+.hero-bg {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(4px);                 /* desenfoque */
+    transform: scale(1.06);            /* evita bordes del blur */
+}
+
+.hero-overlay {
+    position: absolute; inset: 0;
+    /* degradé tipo Lunar: más oscuro a la izquierda para el texto */
+    background:
+            linear-gradient(90deg, rgba(3, 7, 18, 0.65) 0%, rgba(3, 7, 18, 0.35) 40%, rgba(3, 7, 18, 0.20) 100%),
+            radial-gradient(100% 100% at 50% 50%, rgba(255,255,255,.05) 0%, rgba(255,255,255,0) 60%);
+}
+
+.hero-content { position: relative; z-index: 1; color: #fff; }
+
+.features-container {
+    display: grid; gap: 12px; max-width: 640px;
+}
+.feature-card {
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 14px;
+    padding: 14px 18px;
+    backdrop-filter: blur(6px);       /* efecto “glass” */
+}
+.feature-card h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.feature-card p  { margin: 0; opacity: .95; }
+
+.photo-card {
+    height: 440px;
+    border-radius: 20px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+
+/* Botones sobre fondo oscuro */
+.hero-content .btn-primary {
+    box-shadow: 0 10px 30px rgba(2,132,199,.35);
+}
+/* Fondo hero: usa archivos en public/images */
+.hero-bg{
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center 45%;
+
+    /* Fallback JPG (para navegadores sin image-set/WebP) */
+    background-image: url("/images/hero@1536.jpg");
+
+    /* Safari y modernos */
+    background-image: -webkit-image-set(
+            url("/images/hero@1536.webp") 1x,
+            url("/images/hero@2560.webp") 2x
+    );
+    background-image: image-set(
+            url("/images/hero@1536.webp") 1x,
+            url("/images/hero@2560.webp") 2x
+    );
+
+    filter: blur(3px);
+    transform: scale(1.06);
+}
+
+/* Versión móvil (usa los portrait que generamos) */
+@media (max-width: 768px){
+    .hero-bg{
+        background-image: url("/images/hero@portrait@1080x1600.jpg");
+        background-image: -webkit-image-set(url("/images/hero@portrait@1080x1600.webp") 1x);
+        background-image: image-set(url("/images/hero@portrait@1080x1600.webp") 1x);
+        background-position: center 30%;
+    }
+}
+
