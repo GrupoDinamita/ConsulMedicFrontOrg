@@ -3,13 +3,7 @@ import { Container, Row, Col, Card, Button, Alert, Form, Spinner } from 'react-b
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import {
-    MicrophoneIcon,
-    CpuIcon,
-    UploadSimpleIcon,
-    ClockCounterClockwiseIcon,
-    FolderIcon,
-    FolderPlusIcon,
-    PencilIcon,
+    MicrophoneIcon, CpuIcon, UploadSimpleIcon, ClockCounterClockwiseIcon, FolderIcon, FolderPlusIcon, PencilIcon,
     TrashIcon
 } from '@phosphor-icons/react';
 import API_BASE from '../../apiConfig';
@@ -39,36 +33,40 @@ const Dashboard = () => {
 
     const fileInputRef = useRef(null);
 
-    const waitForFinalize = async (consultaId, baseFileName, recordingName, maxMinutes = 3) => {
+    async function waitForFinalize(consultaId, baseFileName, name, maxMinutes = 3) {
         const token = localStorage.getItem('token');
-        if (!token) throw new Error('No auth token');
+        const deadline = Date.now() + maxMinutes * 60 * 1000;
 
-        const started = Date.now();
-        let delay = 1000;
-        const maxDelay = 8000;
-
-        while ((Date.now() - started) < maxMinutes * 60 * 1000) {
+        while (Date.now() < deadline) {
             const res = await fetch(`${API_BASE}/consults/finalize`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ consultaId, baseFileName, name: recordingName || undefined }),
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    consultaId,
+                    baseFileName,
+                    name: name || ''
+                }),
             });
 
-            if (res.ok) return await res.json(); 
-
             if (res.status === 202) {
-            const { retryAfterMs = delay } = await res.json().catch(() => ({}));
-            await new Promise(r => setTimeout(r, retryAfterMs));
-            delay = Math.min(retryAfterMs * 2, maxDelay);
-            continue;
+                await new Promise((r) => setTimeout(r, 4000));
+                continue;
             }
 
-            const text = await res.text().catch(() => '');
-            throw new Error(`Finalize error ${res.status}: ${text}`);
+            if (!res.ok) {
+                const txt = await res.text().catch(() => '');
+                throw new Error(`Finalize error ${res.status}: ${txt}`);
+            }
+
+            return await res.json();
         }
 
-        throw new Error('Timeout esperando el resumen.');
-    };
+        throw new Error('Timeout esperando el procesamiento.');
+    }
+
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -96,48 +94,103 @@ const Dashboard = () => {
         fetchUserData();
     }, [navigate]);
 
-    const handleClickUpload = () => fileInputRef.current?.click();
+    // 🔒 Validación: exigir nombre antes de abrir el file picker
+    const handleClickUpload = () => {
+        if (!recordingName.trim()) {
+            setError('Primero ingresa un nombre para la consulta.');
+            return;
+        }
+        setError('');
+        fileInputRef.current?.click();
+    };
 
     const processUploadedFile = async (file) => {
+        // 🔒 Validación: exigir nombre también si el archivo llega por otra vía
+        if (!recordingName.trim()) {
+            setError('Primero ingresa un nombre para la consulta.');
+            return;
+        }
+
         setProcessingSource('upload');
         setProcessingAudio(true);
         setError('');
         setTranscription('');
         setSummary('');
+
         try {
+            const token = localStorage.getItem('token');
+            if (!token) { navigate('/login'); return; }
+
+            let cid = consultaId;
+            if (!cid) {
+                const createRes = await fetch(`${API_BASE}/consults`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ nombre: recordingName || '' }),
+                });
+                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
+                const created = await createRes.json();
+
+                cid = created.id ?? created.Id;
+                if (!cid) throw new Error('La respuesta de creación no devolvió id.');
+                setConsultaId(cid);
+            }
+
             const formData = new FormData();
             formData.append('audioFile', file);
 
             const uploadResponse = await fetch(`${API_BASE}/consults/upload`, {
-            method: 'POST',
-            body: formData
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
             });
-            if (!uploadResponse.ok) throw new Error('Error al subir el archivo');
+
+            if (!uploadResponse.ok) {
+                const errTxt = await uploadResponse.text().catch(() => '');
+                throw new Error(errTxt || 'Error al subir el archivo');
+            }
 
             const uploadData = await uploadResponse.json();
-            const uploadedFileName = decodeURIComponent(uploadData.uri.split('/').pop()); // ← basename del audio
-            const resultData = await waitForFinalize(uploadedFileName);                   // ← manda basename (no “resumen-…”)
 
-            setSummary(resultData.summary || 'No se pudo obtener el resumen.');
-            setRecordingName('');
-            setLastResultSource('upload');
+            const baseFileName =
+                uploadData.baseFileName ??
+                decodeURIComponent(String(uploadData.uri || '').split('/').pop() || '');
 
-            const token = localStorage.getItem('token');
-            const recordingsResponse = await fetch(`${API_BASE}/consults`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+            if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
+
+            const fin = await waitForFinalize(cid, baseFileName, recordingName);
+
+            const detailsRes = await fetch(`${API_BASE}/consults/${fin.id}/details`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
             });
-            if (recordingsResponse.ok) setRecordings(await recordingsResponse.json());
-            } catch (err) {
+
+            if (detailsRes.ok) {
+                const details = await detailsRes.json();
+                setTranscription(details.transcription || '');
+                setSummary(details.summary || 'No se pudo obtener el resumen.');
+            } else {
+                setSummary('No se pudo obtener el resumen.');
+            }
+            const listRes = await fetch(`${API_BASE}/consults`, {
+                method: 'GET',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (listRes.ok) setRecordings(await listRes.json());
+
+            setLastResultSource('upload');
+            setRecordingName('');
+        } catch (err) {
             console.error('Error:', err);
-            setError('Error al procesar el archivo. Intenta nuevamente.');
-            } finally {
+            setError(err.message || 'Error al procesar el archivo. Intenta nuevamente.');
+        } finally {
             setProcessingAudio(false);
             setProcessingSource(null);
-            }
-        };
-
-
+        }
+    };
 
     const handleUploadFileChange = async (e) => {
         const file = e.target.files?.[0];
@@ -147,11 +200,18 @@ const Dashboard = () => {
     };
 
     const handleStartRecording = async () => {
+        // Validación: exigir nombre antes de pedir permiso al micrófono
+        if (!recordingName.trim()) {
+            setError('Primero ingresa un nombre para la consulta.');
+            return;
+        }
+
         try {
             setLastResultSource('mic');
             setProcessingSource('mic');
             setTranscription('');
             setSummary('');
+            setError(''); // limpia el error si todo ok
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
@@ -201,60 +261,59 @@ const Dashboard = () => {
             const token = localStorage.getItem('token');
             if (!token) { navigate('/login'); return; }
 
-        
-            let cid = consultaId;                                  
+            let cid = consultaId;
             if (!cid) {
-            const createRes = await fetch(`${API_BASE}/consults`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ nombre: recordingName || '' })
-            });
-            if (!createRes.ok) throw new Error('No se pudo crear la consulta');
-            const created = await createRes.json(); // { id, nombre }
-            cid = created.id;
-            setConsultaId(cid);
+                const createRes = await fetch(`${API_BASE}/consults`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ nombre: recordingName || '' })
+                });
+                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
+                const created = await createRes.json(); // { id, nombre }
+                cid = created.id;
+                setConsultaId(cid);
             }
 
             const formData = new FormData();
             formData.append('audioFile', audioBlob);
 
             const uploadResponse = await fetch(`${API_BASE}/consults/upload`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: formData
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
             });
             if (!uploadResponse.ok) throw new Error('Error al subir el audio');
 
             const uploadData = await uploadResponse.json();
             const baseFileName =
-            uploadData.baseFileName ??
-            decodeURIComponent(String(uploadData.uri || '').split('/').pop());
+                uploadData.baseFileName ??
+                decodeURIComponent(String(uploadData.uri || '').split('/').pop());
             if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
 
             const fin = await waitForFinalize(cid, baseFileName, recordingName); // { id, nombre, status }
 
             const detailsRes = await fetch(`${API_BASE}/consults/${fin.id}/details`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (detailsRes.ok) {
-            const details = await detailsRes.json();
-            setTranscription(details.transcription || '');
-            setSummary(details.summary || 'No se pudo obtener el resumen.');
+                const details = await detailsRes.json();
+                setTranscription(details.transcription || '');
+                setSummary(details.summary || 'No se pudo obtener el resumen.');
             } else {
-            setSummary('No se pudo obtener el resumen.');
+                setSummary('No se pudo obtener el resumen.');
             }
 
             const listRes = await fetch(`${API_BASE}/consults`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (listRes.ok) setRecordings(await listRes.json());
 
             // Reset UI si quieres empezar una nueva consulta
             setAudioBlob(null);
             setRecordingName('');
-            setConsultaId(null);                                  
+            setConsultaId(null);
         } catch (err) {
             console.error('Error:', err);
             setError(err.message || 'Error al procesar el audio. Intenta nuevamente.');
@@ -262,7 +321,7 @@ const Dashboard = () => {
             setProcessingAudio(false);
             setProcessingSource(null);
         }
-        };
+    };
 
     const handleViewRecording = async (recordingId) => {
         try {
@@ -436,7 +495,7 @@ const Dashboard = () => {
                                             type="text"
                                             value={recordingName}
                                             onChange={(e) => setRecordingName(e.target.value)}
-                                            placeholder="Ej: Consulta Paciente Juan Pérez - 25/07/2025"
+                                            placeholder="Ej: Consulta Paciente Juan Pérez"
                                             required
                                         />
                                     </Form.Group>
@@ -455,7 +514,7 @@ const Dashboard = () => {
                                             type="text"
                                             value={recordingName}
                                             onChange={(e) => setRecordingName(e.target.value)}
-                                            placeholder="Ej: Consulta Paciente Juan Pérez - 25/07/2025"
+                                            placeholder="Ej: Consulta Paciente Juan Pérez"
                                             required
                                             disabled={processingSource === 'upload' && processingAudio}
                                         />
