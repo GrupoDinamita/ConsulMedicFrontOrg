@@ -36,7 +36,7 @@ const fetchConsults = async () => {
         headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error('Error al cargar las consultas');
+        if (!res.ok) setError('Error al cargar las consultas');
 
         const data = await res.json();
         setConsults(data);
@@ -49,7 +49,7 @@ const fetchConsults = async () => {
     };
 
     useEffect(() => {
-    fetchConsults();
+    void fetchConsults();
     }, []);
 
 
@@ -86,19 +86,13 @@ const fetchConsults = async () => {
     const raw = await res.text();
     if (!res.ok) {
       console.error(`[details] status=${res.status} body=`, raw);
-      if (res.status === 401) {
-        setError('Sesión expirada. Inicia sesión nuevamente.');
-        navigate('/login');
-        return;
-      }
-      if (res.status === 404) {
-        setError('Consulta no encontrada (o no te pertenece).');
-        return;
-      }
-      throw new Error(`Error ${res.status}: ${raw}`);
+      if (res.status === 401) {setError('Sesión expirada. Inicia sesión nuevamente.');navigate('/login'); return; }
+      if (res.status === 404) {setError('Consulta no encontrada.'); return; }
+      setError(`Error ${res.status}: ${raw || 'No se pudo cargar los detalles'}`);
+      return;
     }
 
-    let data = {};
+    let data;
     try { data = JSON.parse(raw); } catch { data = {}; }
 
     setSelected({
@@ -140,13 +134,74 @@ const fetchConsults = async () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!res.ok) throw new Error('Error al eliminar la consulta');
+      if (!res.ok) {
+          setError('Error al eliminar la consulta'); // <- sin throw
+          return;
+      }
 
       setConsults((prev) => prev.filter((c) => c.id !== consultaId));
       if (selected?.id === consultaId) handleCloseModal();
     } catch (err) {
       console.error('Error:', err);
       setError('Error al eliminar la consulta');
+    }
+  };
+
+  const handleDownloadPDF = async (consultaId) => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/consults/${consultaId}/pdf`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError('Sesión expirada. Inicia sesión nuevamente.');
+          navigate('/login');
+          return;
+        }
+        if (res.status === 404) {
+          setError('Consulta no encontrada.');
+          return;
+        }
+        setError('Error al descargar el PDF');
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Obtener el nombre del archivo del header o usar uno por defecto
+      const contentDisposition = res.headers.get('content-disposition');
+      let filename = `consulta-${consultaId}.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error descarga PDF:', err);
+      setError('Error al descargar el PDF de la consulta');
+    } finally {
+      setLoading(false);
     }
   };
 
