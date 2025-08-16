@@ -10,8 +10,8 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-    const fetchUserData = async () => {
-        const token = localStorage.getItem('token');
+        const fetchUserData = async () => {
+            const token = localStorage.getItem('token');
 
             if (!token) {
                 setCurrentUser(null);
@@ -20,24 +20,21 @@ export const AuthProvider = ({ children }) => {
             }
 
             try {
-                console.log('POST a:', `${API_BASE}/auth/register`);
-
                 const response = await fetch(`${API_BASE}/user/profile`, {
                     method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { Authorization: `Bearer ${token}` },
                 });
 
                 if (!response.ok) {
-                    throw new Error('No se pudo cargar el perfil del usuario');
+                    const text = await response.text();
+                    console.error(`Perfil no cargado (${response.status}):`, text);
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('userData');
+                    setCurrentUser(null);
+                    return; // ← evita throw capturado localmente
                 }
 
                 const user = await response.json();
-                console.log('✅ Perfil cargado:', user);
-
-
-                // Guardar en estado y localStorage
                 setCurrentUser(user);
                 localStorage.setItem('userData', JSON.stringify(user));
             } catch (error) {
@@ -50,42 +47,39 @@ export const AuthProvider = ({ children }) => {
             }
         };
 
-        fetchUserData();
+        void fetchUserData(); // ← evitamos advertencia de promesa ignorada
     }, []);
-
 
     const login = async (email, password) => {
         try {
             const response = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    correo: email,
-                    contrasenia: password
-                })
+                body: JSON.stringify({ correo: email, contrasenia: password }),
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(text || 'Error al iniciar sesión');
+                return { success: false, error: text || 'Error al iniciar sesión' };
             }
 
             const data = await response.json();
             localStorage.setItem('token', data.token);
 
-            // Llamar a /user/profile
+            // Cargar perfil después de login
             const profileRes = await fetch(`${API_BASE}/user/profile`, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${data.token}`
-                }
+                headers: { Authorization: `Bearer ${data.token}` },
             });
 
-            if (!profileRes.ok) throw new Error('No se pudo cargar el perfil');
+            if (!profileRes.ok) {
+                const t = await profileRes.text();
+                localStorage.removeItem('token');
+                localStorage.removeItem('userData');
+                return { success: false, error: t || 'No se pudo cargar el perfil' };
+            }
 
             const profileData = await profileRes.json();
-
-            // Guardar perfil
             setCurrentUser(profileData);
             localStorage.setItem('userData', JSON.stringify(profileData));
 
@@ -95,52 +89,40 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-
     const register = async (userData) => {
         try {
-            console.log('📦 Enviando datos de registro:', userData);
             const response = await fetch(`${API_BASE}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData)
+                body: JSON.stringify(userData),
             });
 
             if (!response.ok) {
-            const text = await response.text();
-            console.error(`❌ Error ${response.status} ${response.statusText}:`, text);
-            throw new Error(`(${response.status}) ${text || 'Error al registrarse'}`);
-        }
-
-
-
-            // Verificar si la respuesta es JSON o texto
-            const contentType = response.headers.get('content-type');
-            let data;
-
-            if (contentType && contentType.includes('application/json')) {
-                data = await response.json();
-            } else {
-                // Si la respuesta no es JSON, usamos texto y creamos un objeto
                 const text = await response.text();
-                console.log('Respuesta del servidor:', text);
+                console.error(`❌ Error ${response.status} ${response.statusText}:`, text);
+                return { success: false, error: `(${response.status}) ${text || 'Error al registrarse'}` };
+            }
 
-                // Si el registro fue exitoso pero no hay token, redirigimos a login
+            // Puede venir JSON o texto
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
                 return { success: true, message: text, requireLogin: true };
             }
 
-            // Si hay token, lo guardamos
+            const data = await response.json();
+
             if (data && data.token) {
                 localStorage.setItem('token', data.token);
 
-                // Como no hay endpoint de perfil, creamos datos básicos del usuario
+                // Datos básicos si aún no hay endpoint de perfil tras registro
                 const basicUserData = {
                     nombre: userData.nombre,
                     correo: userData.correo,
                     especialidad: userData.especialidad,
-                    isAuthenticated: true
+                    isAuthenticated: true,
                 };
 
-                // Guardar datos del usuario en localStorage
                 localStorage.setItem('userData', JSON.stringify(basicUserData));
                 setCurrentUser(basicUserData);
                 return { success: true };
@@ -165,14 +147,10 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         logout,
-        isAuthenticated: !!currentUser
+        isAuthenticated: !!currentUser,
     };
 
-    return (
-        <AuthContext.Provider value={value}>
-            {children}
-        </AuthContext.Provider>
-    );
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;
