@@ -83,7 +83,7 @@ const Dashboard = () => {
                 const recRes = await fetch(`${API_BASE}/consults`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                if (!recRes.ok) throw new Error('No se pudo cargar las consultas');
+                if (!recRes.ok) setError('No se pudo cargar las consultas');
                 const list = await recRes.json();
                 setRecordings(Array.isArray(list) ? list : []);
             } catch (e) {
@@ -164,7 +164,7 @@ const Dashboard = () => {
             });
             if (!up.ok) {
                 const t = await up.text().catch(() => '');
-                throw new Error(t || 'Error al subir el archivo');
+                setError(t || 'Error al subir el archivo');
             }
             const upData = await up.json();
 
@@ -186,7 +186,7 @@ const Dashboard = () => {
             });
             if (!createRes.ok) {
                 const t = await createRes.text().catch(() => '');
-                throw new Error(t || 'No se pudo crear la consulta');
+                 setError(t || 'No se pudo crear la consulta');
             }
             const fin = await createRes.json();
             setConsultaId(fin?.id);
@@ -280,7 +280,7 @@ const Dashboard = () => {
                 headers: { Authorization: `Bearer ${token}` },
                 body: fd
             });
-            if (!up.ok) throw new Error('Error al subir el audio grabado');
+            if (!up.ok) setError('Error al subir el audio grabado');
             const upData = await up.json();
             const baseFileName =
                 upData.baseFileName ??
@@ -298,7 +298,7 @@ const Dashboard = () => {
                     baseFileName
                 })
             });
-            if (!createRes.ok) throw new Error('Error al crear la consulta');
+            if (!createRes.ok) setError('Error al crear la consulta');
             const fin = await createRes.json();
             setConsultaId(fin?.id);
 
@@ -349,7 +349,7 @@ const Dashboard = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
             }
-            if (!res.ok) throw new Error('No se pudo cargar los detalles');
+            if (!res.ok) setError('No se pudo cargar los detalles');
 
             const data = await res.json();
             setSelectedConsult({
