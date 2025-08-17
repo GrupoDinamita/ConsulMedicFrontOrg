@@ -61,7 +61,7 @@ const EditProfile = () => {
                 setSuccess('Perfil actualizado correctamente');
             } else {
                 const text = await response.text();
-                throw new Error(text || 'Error al actualizar el perfil');
+                setError(text || 'Error al actualizar el perfil');
             }
         } catch (error) {
             console.error('Error al actualizar perfil:', error);

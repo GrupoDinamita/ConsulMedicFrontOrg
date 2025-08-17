@@ -37,7 +37,7 @@ const ChangePassword = () => {
 
         try {
             const token = localStorage.getItem('token');
-            if (!token) throw new Error('No se encontró la sesión del usuario');
+            if (!token) setError('No se encontró la sesión del usuario');
 
             const response = await fetch(`${API_BASE}/user/change-password`, {
                 method: 'PUT',
@@ -60,7 +60,7 @@ const ChangePassword = () => {
                 });
             } else {
                 const text = await response.text();
-                throw new Error(text || 'Error al actualizar la contraseña');
+                 setError(text || 'Error al actualizar la contraseña');
             }
         } catch (error) {
             console.error('Error al actualizar contraseña:', error);
