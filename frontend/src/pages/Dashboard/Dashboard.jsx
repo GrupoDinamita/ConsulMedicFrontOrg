@@ -1,39 +1,103 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Button, Alert, Form, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Alert, Form, Spinner, Modal } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import './Dashboard.css';
 import {
-    MicrophoneIcon, CpuIcon, UploadSimpleIcon, ClockCounterClockwiseIcon, FolderIcon, FolderPlusIcon, PencilIcon,
-    TrashIcon
+    MicrophoneIcon,
+    CpuIcon,
+    UploadSimpleIcon,
+    ClockCounterClockwiseIcon,
+    FolderIcon,
+    FolderPlusIcon,
+    PencilIcon,
+    TrashIcon,
+    FilePdfIcon
 } from '@phosphor-icons/react';
 import API_BASE from '../../apiConfig';
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [consultaId, setConsultaId] = useState(null);
+
+    // ====== Estado general ======
     const [userData, setUserData] = useState(null);
+    const [planName, setPlanName] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    // ====== Consultas y recientes ======
     const [recordings, setRecordings] = useState([]);
+
+    // ====== Grabación / procesamiento ======
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef(null);
     const [audioBlob, setAudioBlob] = useState(null);
+    const [processingAudio, setProcessingAudio] = useState(false);
+    const [processingSource, setProcessingSource] = useState(null); // 'upload' | 'mic' | null
+    const [recordingName, setRecordingName] = useState('');
+    const [consultaId, setConsultaId] = useState(null);
+
+    // ====== Resultado mostrado en el dashboard ======
     const [transcription, setTranscription] = useState('');
     const [summary, setSummary] = useState('');
-    const [processingAudio, setProcessingAudio] = useState(false);
-    const [recordingName, setRecordingName] = useState('');
-    const [lastResultSource, setLastResultSource] = useState(null);
-    const [processingSource, setProcessingSource] = useState(null);
+    const [lastResultSource, setLastResultSource] = useState(null); // 'upload' | 'mic' | null
 
+    // ====== Carpetas (UI) ======
     const [folders, setFolders] = useState([
         { id: 'inbox', name: 'General' },
         { id: 'reports', name: 'Informes' }
     ]);
     const [selectedFolder, setSelectedFolder] = useState('inbox');
 
+    // ====== Quick view (Modal) ======
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [selectedConsult, setSelectedConsult] = useState(null); // {id,nombre,fechaCreacion,transcription,summary}
+
+    // ====== File input ref ======
     const fileInputRef = useRef(null);
 
-    async function waitForFinalize(consultaId, baseFileName, name, maxMinutes = 3) {
+    // ====== Util ======
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const opts = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+        return new Date(dateString).toLocaleDateString('es-ES', opts);
+    };
+
+    // ====== Carga inicial ======
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) { navigate('/login'); return; }
+
+                // Perfil (opcional)
+                const profileRes = await fetch(`${API_BASE}/user/profile`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (profileRes.ok) {
+                    const profile = await profileRes.json();
+                    setUserData(profile);
+                    if (profile?.plan) setPlanName(profile.plan);
+                }
+
+                // Consultas para “Recientes”
+                const recRes = await fetch(`${API_BASE}/consults`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!recRes.ok) throw new Error('No se pudo cargar las consultas');
+                const list = await recRes.json();
+                setRecordings(Array.isArray(list) ? list : []);
+            } catch (e) {
+                console.error(e);
+                setError('Error al cargar datos iniciales');
+            } finally {
+                setLoading(false);
+            }
+        };
+        load();
+    }, [navigate]);
+
+    // ====== Finalize polling ======
+    async function waitForFinalize(consultaId, baseFileName, name, maxMinutes = 4) {
         const token = localStorage.getItem('token');
         const deadline = Date.now() + maxMinutes * 60 * 1000;
 
@@ -42,13 +106,9 @@ const Dashboard = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({
-                    consultaId,
-                    baseFileName,
-                    name: name || ''
-                }),
+                body: JSON.stringify({ consultaId, baseFileName, name: name || '' })
             });
 
             if (res.status === 202) {
@@ -58,43 +118,17 @@ const Dashboard = () => {
 
             if (!res.ok) {
                 const txt = await res.text().catch(() => '');
-                throw new Error(`Finalize error ${res.status}: ${txt}`);
+                throw new Error(txt || 'No se pudo finalizar el resumen');
             }
 
-            return await res.json();
+            const details = await res.json().catch(() => ({}));
+            return details;
         }
 
-        throw new Error('Timeout esperando el procesamiento.');
+        throw new Error('Tiempo agotado al esperar el resumen.');
     }
 
-
-    useEffect(() => {
-        const fetchUserData = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) { navigate('/login'); return; }
-
-                const profileRes = await fetch(`${API_BASE}/user/profile`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (!profileRes.ok) throw new Error('No se pudo obtener la información del usuario');
-                setUserData(await profileRes.json());
-
-                const recRes = await fetch(`${API_BASE}/consults`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                if (recRes.ok) setRecordings(await recRes.json());
-            } catch (err) {
-                console.error(err);
-                setError('Error al cargar los datos del usuario');
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUserData();
-    }, [navigate]);
-
-    // 🔒 Validación: exigir nombre antes de abrir el file picker
+    // ====== Subir archivo (desde botón) ======
     const handleClickUpload = () => {
         if (!recordingName.trim()) {
             setError('Primero ingresa un nombre para la consulta.');
@@ -105,7 +139,6 @@ const Dashboard = () => {
     };
 
     const processUploadedFile = async (file) => {
-        // 🔒 Validación: exigir nombre también si el archivo llega por otra vía
         if (!recordingName.trim()) {
             setError('Primero ingresa un nombre para la consulta.');
             return;
@@ -121,86 +154,73 @@ const Dashboard = () => {
             const token = localStorage.getItem('token');
             if (!token) { navigate('/login'); return; }
 
-            let cid = consultaId;
-            if (!cid) {
-                const createRes = await fetch(`${API_BASE}/consults`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({ nombre: recordingName || '' }),
-                });
-                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
-                const created = await createRes.json();
-
-                cid = created.id ?? created.Id;
-                if (!cid) throw new Error('La respuesta de creación no devolvió id.');
-                setConsultaId(cid);
-            }
-
-            const formData = new FormData();
-            formData.append('audioFile', file);
-
-            const uploadResponse = await fetch(`${API_BASE}/consults/upload`, {
+            // 1) Subir
+            const fd = new FormData();
+            fd.append('audioFile', file);
+            const up = await fetch(`${API_BASE}/consults/upload`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
-                body: formData,
+                body: fd
             });
-
-            if (!uploadResponse.ok) {
-                const errTxt = await uploadResponse.text().catch(() => '');
-                throw new Error(errTxt || 'Error al subir el archivo');
+            if (!up.ok) {
+                const t = await up.text().catch(() => '');
+                throw new Error(t || 'Error al subir el archivo');
             }
-
-            const uploadData = await uploadResponse.json();
+            const upData = await up.json();
 
             const baseFileName =
-                uploadData.baseFileName ??
-                decodeURIComponent(String(uploadData.uri || '').split('/').pop() || '');
+                upData.baseFileName ??
+                decodeURIComponent(String(upData.uri || '').split('/').pop() || '');
 
-            if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
-
-            const fin = await waitForFinalize(cid, baseFileName, recordingName);
-
-            const detailsRes = await fetch(`${API_BASE}/consults/${fin.id}/details`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
+            // 2) Crear consulta
+            const createRes = await fetch(`${API_BASE}/consults`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: recordingName.trim(),
+                    baseFileName
+                })
             });
+            if (!createRes.ok) {
+                const t = await createRes.text().catch(() => '');
+                throw new Error(t || 'No se pudo crear la consulta');
+            }
+            const fin = await createRes.json();
+            setConsultaId(fin?.id);
 
-            if (detailsRes.ok) {
-                const details = await detailsRes.json();
+            // 3) Poll finalize
+            const details = await waitForFinalize(fin.id, baseFileName, recordingName);
+            if (details) {
                 setTranscription(details.transcription || '');
                 setSummary(details.summary || 'No se pudo obtener el resumen.');
             } else {
                 setSummary('No se pudo obtener el resumen.');
             }
+
+            // 4) Refrescar recientes
             const listRes = await fetch(`${API_BASE}/consults`, {
-                method: 'GET',
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (listRes.ok) setRecordings(await listRes.json());
 
-            setLastResultSource('upload');
+            // Limpieza
+            setAudioBlob(null);
             setRecordingName('');
+            setConsultaId(null);
         } catch (err) {
-            console.error('Error:', err);
-            setError(err.message || 'Error al procesar el archivo. Intenta nuevamente.');
+            console.error(err);
+            setError(err.message || 'Error al procesar el archivo.');
         } finally {
             setProcessingAudio(false);
             setProcessingSource(null);
         }
     };
 
-    const handleUploadFileChange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        await processUploadedFile(file);
-        e.target.value = ''; // permitir re-subir el mismo archivo
-    };
-
+    // ====== Grabación mic ======
     const handleStartRecording = async () => {
-        // Validación: exigir nombre antes de pedir permiso al micrófono
         if (!recordingName.trim()) {
             setError('Primero ingresa un nombre para la consulta.');
             return;
@@ -211,7 +231,7 @@ const Dashboard = () => {
             setProcessingSource('mic');
             setTranscription('');
             setSummary('');
-            setError(''); // limpia el error si todo ok
+            setError('');
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
@@ -225,33 +245,24 @@ const Dashboard = () => {
             mediaRecorderRef.current = mr;
             setIsRecording(true);
         } catch (err) {
-            console.error('Error al iniciar la grabación:', err);
+            console.error('Mic error:', err);
             setError('No se pudo acceder al micrófono');
         }
     };
 
     const handleStopRecording = () => {
-        const mr = mediaRecorderRef.current;
-        if (mr && isRecording) {
-            mr.stop();
-            mr.stream.getTracks().forEach(t => t.stop());
-            setIsRecording(false);
-        }
+        try {
+            mediaRecorderRef.current?.stop();
+        } catch {}
+        setIsRecording(false);
     };
 
-    // nombre sugerido tras grabar
-    useEffect(() => {
-        if (audioBlob && !recordingName) {
-            const d = new Date();
-            const stamp = d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
-            setRecordingName(`Consulta ${stamp}`);
-        }
-    }, [audioBlob, recordingName]);
-
     const handleProcessAudio = async () => {
-        if (!audioBlob) { setError('Por favor grabe audio'); return; }
+        if (!audioBlob) {
+            setError('Por favor graba audio');
+            return;
+        }
 
-        setProcessingSource('mic');
         setProcessingAudio(true);
         setError('');
         setTranscription('');
@@ -261,109 +272,147 @@ const Dashboard = () => {
             const token = localStorage.getItem('token');
             if (!token) { navigate('/login'); return; }
 
-            let cid = consultaId;
-            if (!cid) {
-                const createRes = await fetch(`${API_BASE}/consults`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ nombre: recordingName || '' })
-                });
-                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
-                const created = await createRes.json(); // { id, nombre }
-                cid = created.id;
-                setConsultaId(cid);
-            }
-
-            const formData = new FormData();
-            formData.append('audioFile', audioBlob);
-
-            const uploadResponse = await fetch(`${API_BASE}/consults/upload`, {
+            // 1) Subir audio grabado
+            const fd = new FormData();
+            fd.append('audioFile', audioBlob);
+            const up = await fetch(`${API_BASE}/consults/upload`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
+                headers: { Authorization: `Bearer ${token}` },
+                body: fd
             });
-            if (!uploadResponse.ok) throw new Error('Error al subir el audio');
-
-            const uploadData = await uploadResponse.json();
+            if (!up.ok) throw new Error('Error al subir el audio grabado');
+            const upData = await up.json();
             const baseFileName =
-                uploadData.baseFileName ??
-                decodeURIComponent(String(uploadData.uri || '').split('/').pop());
-            if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
+                upData.baseFileName ??
+                decodeURIComponent(String(upData.uri || '').split('/').pop() || '');
 
-            const fin = await waitForFinalize(cid, baseFileName, recordingName); // { id, nombre, status }
-
-            const detailsRes = await fetch(`${API_BASE}/consults/${fin.id}/details`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
+            // 2) Crear consulta
+            const createRes = await fetch(`${API_BASE}/consults`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    name: recordingName.trim(),
+                    baseFileName
+                })
             });
-            if (detailsRes.ok) {
-                const details = await detailsRes.json();
+            if (!createRes.ok) throw new Error('Error al crear la consulta');
+            const fin = await createRes.json();
+            setConsultaId(fin?.id);
+
+            // 3) Finalize (poll)
+            const details = await waitForFinalize(fin.id, baseFileName, recordingName);
+            if (details) {
                 setTranscription(details.transcription || '');
                 setSummary(details.summary || 'No se pudo obtener el resumen.');
             } else {
                 setSummary('No se pudo obtener el resumen.');
             }
 
+            // 4) Refrescar recientes
             const listRes = await fetch(`${API_BASE}/consults`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (listRes.ok) setRecordings(await listRes.json());
 
-            // Reset UI si quieres empezar una nueva consulta
+            // Reset
             setAudioBlob(null);
             setRecordingName('');
             setConsultaId(null);
         } catch (err) {
-            console.error('Error:', err);
-            setError(err.message || 'Error al procesar el audio. Intenta nuevamente.');
+            console.error(err);
+            setError(err.message || 'Error al procesar el audio.');
         } finally {
             setProcessingAudio(false);
             setProcessingSource(null);
         }
     };
 
-    const handleViewRecording = async (recordingId) => {
+    // ====== Quick view desde Recientes ======
+    const openConsultDetails = async (idLike) => {
         try {
+            setError('');
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE}/consults/${recordingId}`, {
+            if (!token) { navigate('/login'); return; }
+            const id = idLike;
+
+            // 1) Intento /details
+            let res = await fetch(`${API_BASE}/consults/${id}/details`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('No se pudo obtener la grabación');
-            const data = await response.json();
-            setTranscription(data.transcription || '');
-            setSummary(data.summary || '');
+
+            // 2) Fallback a /consults/:id
+            if (!res.ok) {
+                res = await fetch(`${API_BASE}/consults/${id}`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+            if (!res.ok) throw new Error('No se pudo cargar los detalles');
+
+            const data = await res.json();
+            setSelectedConsult({
+                id,
+                nombre: data?.nombre ?? data?.name ?? '',
+                fechaCreacion: data?.fechaCreacion ?? data?.createdAt ?? data?.fecha ?? null,
+                transcription: data?.transcription ?? '',
+                summary: data?.summary ?? ''
+            });
+            setDetailsOpen(true);
         } catch (err) {
-            console.error(err);
-            setError('Error al cargar la grabación');
+            console.error('Detalles:', err);
+            setError('Error al cargar los detalles de la consulta');
         }
     };
 
-    const startMicFlow = () => {
-        if (isRecording) handleStopRecording();
-        setTranscription('');
-        setSummary('');
-        setAudioBlob(null);
-        setProcessingAudio(false);
-        setRecordingName('');
-        setLastResultSource('mic');
+    const handleDownloadPDF = async (consultaId) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) { navigate('/login'); return; }
+
+            const res = await fetch(`${API_BASE}/consults/${consultaId}/pdf`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!res.ok) { setError('Error al descargar el PDF'); return; }
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const cd = res.headers.get('content-disposition');
+            let filename = `consulta-${consultaId}.pdf`;
+            if (cd) {
+                const m = cd.match(/filename="?([^"]+)"?/);
+                if (m) filename = m[1];
+            }
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('PDF:', err);
+            setError('Error al descargar el PDF de la consulta');
+        }
     };
 
+    // ====== Carpetas (UI) ======
     const handleAddFolder = () => {
         const name = prompt('Nombre de la carpeta:');
         if (!name) return;
         const id = `${Date.now()}`;
-        setFolders(prev => [...prev, { id, name }]);
+        setFolders((prev) => [...prev, { id, name }]);
         setSelectedFolder(id);
     };
     const handleRenameFolder = (id) => {
         const name = prompt('Nuevo nombre:');
         if (!name) return;
-        setFolders(prev => prev.map(f => f.id === id ? ({ ...f, name }) : f));
+        setFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
     };
     const handleDeleteFolder = (id) => {
-        if (!confirm('¿Eliminar carpeta?')) return;
-        setFolders(prev => prev.filter(f => f.id !== id));
+        if (!window.confirm('¿Eliminar carpeta?')) return;
+        setFolders((prev) => prev.filter((f) => f.id !== id));
         if (selectedFolder === id) setSelectedFolder('inbox');
     };
 
@@ -375,30 +424,21 @@ const Dashboard = () => {
         );
     }
 
-    const showEmptyState =
-        !transcription &&
-        !summary &&
-        recordings.length === 0 &&
-        !audioBlob &&
-        !isRecording &&
-        !processingAudio &&
-        !lastResultSource;
-
-    const planName = userData?.planName || userData?.plan || userData?.subscription?.plan ;
+    const showEmptyState = !processingAudio && !isRecording && !transcription && !summary;
 
     return (
         <div className="dashboard-shell">
-            {}
+            {/* ===== Sidebar ===== */}
             <aside className="sidebar">
-                <div className="sidebar-header">
-                    <h6>Carpetas</h6>
-                    <Button variant="link" className="p-0" onClick={handleAddFolder} title="Nueva carpeta">
-                        <FolderPlusIcon size={18} />
-                    </Button>
-                </div>
+                <div className="sidebar-section">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                        <h6>Carpetas</h6>
+                        <Button size="sm" variant="link" onClick={handleAddFolder} title="Nueva carpeta">
+                            <FolderPlusIcon size={16} />
+                        </Button>
+                    </div>
 
-                <div className="folder-list">
-                    {folders.map(f => (
+                    {folders.map((f) => (
                         <div
                             key={f.id}
                             className={`folder-item ${selectedFolder === f.id ? 'active' : ''}`}
@@ -409,10 +449,20 @@ const Dashboard = () => {
                                 <span>{f.name}</span>
                             </div>
                             <div className="folder-actions">
-                                <Button variant="link" className="p-0 me-2" onClick={(e)=>{e.stopPropagation();handleRenameFolder(f.id);}} title="Renombrar">
+                                <Button
+                                    variant="link"
+                                    className="p-0 me-1"
+                                    onClick={(e) => { e.stopPropagation(); handleRenameFolder(f.id); }}
+                                    title="Renombrar"
+                                >
                                     <PencilIcon size={16} />
                                 </Button>
-                                <Button variant="link" className="p-0" onClick={(e)=>{e.stopPropagation();handleDeleteFolder(f.id);}} title="Eliminar">
+                                <Button
+                                    variant="link"
+                                    className="p-0"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteFolder(f.id); }}
+                                    title="Eliminar"
+                                >
                                     <TrashIcon size={16} />
                                 </Button>
                             </div>
@@ -423,174 +473,202 @@ const Dashboard = () => {
                 <div className="sidebar-section mt-4">
                     <h6>Recientes</h6>
                     <div className="recent-list">
-                        {recordings.slice(0,5).map(r => (
+                        {recordings.slice(0, 5).map((r) => (
                             <button
-                                key={r._id}
+                                key={r.id || r._id}
                                 className="recent-item"
-                                onClick={() => handleViewRecording(r._id)}
-                                title={r.name}
+                                onClick={() => openConsultDetails(r.id || r._id)}
+                                title={r.nombre || r.name}
                             >
                                 <ClockCounterClockwiseIcon size={16} />
-                                <span className="text-truncate">{r.name}</span>
+                                <span className="text-truncate">{r.nombre || r.name}</span>
                             </button>
                         ))}
-                        {recordings.length === 0 && <small className="text-muted">Sin registros</small>}
                     </div>
                 </div>
             </aside>
 
-            {}
-            <main className="main">
-                <div className="main-header">
-                    <h1>Dashboard</h1>
-                    <div className="ms-auto badge bg-secondary">{planName}</div>
+            {/* ===== Main ===== */}
+            <main className="main-content">
+                <div className="page-header d-flex align-items-center mb-3">
+                    <h1 className="mb-0">Dashboard</h1>
+                    {planName && <div className="ms-auto badge bg-secondary">{planName}</div>}
                 </div>
 
                 {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
 
-                {}
+                {/* Acciones rápidas — turquesa oscuro (restaurado) */}
                 <div className="quick-actions">
-                    <button className="action-card action-upload theme-turquoise-deep" onClick={handleClickUpload} disabled={processingAudio}>
+                    <button
+                        className="action-card action-upload theme-turquoise-deep"
+                        onClick={handleClickUpload}
+                        disabled={processingAudio}
+                        title="Subir archivo"
+                    >
                         <UploadSimpleIcon size={22} />
-                        <span>{processingAudio ? 'Procesando…' : 'Subir archivo'}</span>
-                        <input ref={fileInputRef} onChange={handleUploadFileChange} type="file" accept="audio/*,video/*,.wav,.mp3,.m4a,.webm" hidden />
+                        <span>{processingAudio && processingSource === 'upload' ? 'Procesando…' : 'Subir archivo'}</span>
+                        <input
+                            ref={fileInputRef}
+                            onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) processUploadedFile(f);
+                                e.target.value = '';
+                            }}
+                            type="file"
+                            accept="audio/*,video/*,.wav,.mp3,.m4a,.webm"
+                            hidden
+                        />
                     </button>
 
-                    <button className="action-card action-mic  theme-turquoise-deep" onClick={startMicFlow} disabled={processingAudio} title="Grabar consulta (micrófono)">
+                    <button
+                        className="action-card action-mic theme-turquoise-deep"
+                        onClick={!isRecording ? handleStartRecording : handleStopRecording}
+                        disabled={processingAudio}
+                        title="Grabar consulta (micrófono)"
+                    >
                         <MicrophoneIcon size={22} />
-                        <span>Grabar consulta (micrófono)</span>
+                        <span>{!isRecording ? 'Grabar consulta (micrófono)' : 'Detener'}</span>
                     </button>
                 </div>
 
+                {/* Estado vacío vs flujo de nueva consulta */}
+                {showEmptyState ? (
+                    <Card className="mb-4">
+                        <Card.Header><h3>Nueva Consulta Médica</h3></Card.Header>
+                        <Card.Body>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Nombre de la consulta</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    value={recordingName}
+                                    onChange={(e) => setRecordingName(e.target.value)}
+                                    placeholder="Ej: Consulta Paciente Juan Pérez"
+                                    required
+                                    disabled={processingSource === 'upload' && processingAudio}
+                                />
+                            </Form.Group>
 
-                {}
-                {showEmptyState && (
-                    <div className="empty-state">
-                        <div className="empty-icon">↑</div>
-                        <h4>Agrega tu primera consulta</h4>
-                        <p>Sube un archivo o graba audio. Crearemos transcripciones y resúmenes para ti.</p>
-                        <Button variant="primary" onClick={handleClickUpload} disabled={processingAudio}>
-                            Explorar opciones
-                        </Button>
-                    </div>
-                )}
-
-                {}
-                {!showEmptyState && (
-                    <>
-                        {lastResultSource === 'upload' ? (
-                            <Card className="mb-4">
-                                <Card.Header><h3>Consulta procesada</h3></Card.Header>
-                                <Card.Body>
-                                    {processingSource === 'upload' && processingAudio && (
-                                        <Alert variant="info" className="mb-3 d-flex align-items-center">
-                                            <Spinner animation="border" size="sm" className="me-2" />
-                                            Analizando archivo subido… Esto puede tardar unos minutos.
-                                        </Alert>
-                                    )}
-
-                                    <Form.Group className="mb-2">
-                                        <Form.Label>Nombre de la consulta</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            value={recordingName}
-                                            onChange={(e) => setRecordingName(e.target.value)}
-                                            placeholder="Ej: Consulta Paciente Juan Pérez"
-                                            required
-                                        />
-                                    </Form.Group>
-                                    <small className="text-muted">
-                                        Para grabar una nueva consulta, usa “Grabar consulta (micrófono)” en Acciones rápidas.
-                                    </small>
-                                </Card.Body>
-                            </Card>
-                        ) : (
-                            <Card className="mb-4">
-                                <Card.Header><h3>Nueva Consulta Médica</h3></Card.Header>
-                                <Card.Body>
-                                    <Form.Group className="mb-3">
-                                        <Form.Label>Nombre de la consulta</Form.Label>
-                                        <Form.Control
-                                            type="text"
-                                            value={recordingName}
-                                            onChange={(e) => setRecordingName(e.target.value)}
-                                            placeholder="Ej: Consulta Paciente Juan Pérez"
-                                            required
-                                            disabled={processingSource === 'upload' && processingAudio}
-                                        />
-                                    </Form.Group>
-
-                                    <div className="recording-controls mb-4">
-                                        {processingSource === 'upload' && processingAudio ? (
-                                            <Alert variant="info" className="mb-0 d-flex align-items-center">
-                                                <Spinner animation="border" size="sm" className="me-2" />
-                                                Analizando archivo subido… Esto puede tardar unos minutos.
-                                            </Alert>
+                            <div className="recording-controls mb-2">
+                                {processingSource === 'upload' && processingAudio ? (
+                                    <Alert variant="info" className="mb-0 d-flex align-items-center">
+                                        <Spinner animation="border" size="sm" className="me-2" />
+                                        Analizando archivo subido… Esto puede tardar unos minutos.
+                                    </Alert>
+                                ) : (
+                                    <>
+                                        {!isRecording ? (
+                                            <button className="btn btn-primary" onClick={handleStartRecording} disabled={processingAudio || !recordingName}>
+                                                <span className="me-2"><MicrophoneIcon /></span>
+                                                Iniciar grabación
+                                            </button>
                                         ) : (
                                             <>
-                                                {!isRecording ? (
-                                                    <button className="btn btn-primary" onClick={handleStartRecording} disabled={processingAudio}>
-                                                        <span className="me-2"><MicrophoneIcon /></span>
-                                                        Iniciar grabación
-                                                    </button>
-                                                ) : (
-                                                    <button className="btn btn-danger" onClick={handleStopRecording}>
-                                                        Detener grabación
-                                                    </button>
-                                                )}
-
-                                                {audioBlob && !isRecording && (
-                                                    <button
-                                                        className="btn btn-success ms-3"
-                                                        onClick={handleProcessAudio}
-                                                        disabled={processingAudio || !recordingName}
-                                                    >
-                                                        {processingAudio ? (
-                                                            <>
-                                                                <Spinner animation="border" size="sm" className="me-2" />
-                                                                Procesando…
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <span className="me-2"><CpuIcon /></span>
-                                                                Procesar audio
-                                                            </>
-                                                        )}
+                                                <button className="btn btn-danger" onClick={handleStopRecording} disabled={processingAudio}>
+                                                    <span className="me-2"><MicrophoneIcon /></span>
+                                                    Detener
+                                                </button>
+                                                {audioBlob && !processingAudio && (
+                                                    <button className="btn btn-success ms-3" onClick={handleProcessAudio}>
+                                                        <span className="me-2"><CpuIcon /></span>
+                                                        Procesar audio
                                                     </button>
                                                 )}
                                             </>
                                         )}
+                                    </>
+                                )}
+                            </div>
+                        </Card.Body>
+                    </Card>
+                ) : (
+                    <Card className="mb-4">
+                        <Card.Header><h3>Consulta procesada</h3></Card.Header>
+                        <Card.Body>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Nombre de la consulta</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    value={recordingName}
+                                    onChange={(e) => setRecordingName(e.target.value)}
+                                    placeholder="Ej: Consulta Paciente Juan Pérez"
+                                    required
+                                />
+                            </Form.Group>
+                            {processingSource === 'upload' && processingAudio && (
+                                <Alert variant="info" className="d-flex align-items-center">
+                                    <Spinner animation="border" size="sm" className="me-2" />
+                                    Analizando archivo subido… Esto puede tardar unos minutos.
+                                </Alert>
+                            )}
+                        </Card.Body>
+                    </Card>
+                )}
+
+                {(transcription || summary) && (
+                    <Row>
+                        <Col md={12}>
+                            <Card className="mb-4">
+                                <Card.Header><h3>Transcripción</h3></Card.Header>
+                                <Card.Body>
+                                    <div className="transcription-content">
+                                        {transcription || 'No hay transcripción disponible'}
                                     </div>
                                 </Card.Body>
                             </Card>
-                        )}
-
-                        {(transcription || summary) && (
-                            <Row>
-                                <Col md={12}>
-                                    <Card className="mb-4">
-                                        <Card.Header><h3>Transcripción</h3></Card.Header>
-                                        <Card.Body>
-                                            <div className="transcription-content">
-                                                {transcription || 'No hay transcripción disponible'}
-                                            </div>
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                                <Col md={12}>
-                                    <Card className="mb-4">
-                                        <Card.Header><h3>Resumen de la consulta</h3></Card.Header>
-                                        <Card.Body>
-                                            <div className="summary-content">
-                                                {summary || 'No hay resumen disponible'}
-                                            </div>
-                                        </Card.Body>
-                                    </Card>
-                                </Col>
-                            </Row>
-                        )}
-                    </>
+                        </Col>
+                        <Col md={12}>
+                            <Card className="mb-4">
+                                <Card.Header><h3>Resumen de la consulta</h3></Card.Header>
+                                <Card.Body>
+                                    <div className="summary-content">
+                                        {summary || 'No hay resumen disponible'}
+                                    </div>
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
                 )}
+
+                {/* ===== Modal de vista rápida ===== */}
+                <Modal show={detailsOpen} onHide={() => { setDetailsOpen(false); setSelectedConsult(null); }} size="lg">
+                    {selectedConsult ? (
+                        <>
+                            <Modal.Header closeButton>
+                                <Modal.Title>{selectedConsult.nombre}</Modal.Title>
+                            </Modal.Header>
+                            <Modal.Body>
+                                <div className="mb-4">
+                                    <h5>Información</h5>
+                                    <p><strong>Fecha:</strong> {formatDate(selectedConsult.fechaCreacion)}</p>
+                                </div>
+                                <div className="mb-4">
+                                    <h5>Transcripción</h5>
+                                    <div className="form-control" style={{ height: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                                        {selectedConsult.transcription || 'No hay transcripción disponible'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h5>Resumen</h5>
+                                    <div className="form-control" style={{ height: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                                        {selectedConsult.summary || 'No hay resumen disponible'}
+                                    </div>
+                                </div>
+                            </Modal.Body>
+                            <Modal.Footer>
+                                <Button variant="outline-success" onClick={() => handleDownloadPDF(selectedConsult.id)}>
+                                    <FilePdfIcon className="me-2" /> Descargar PDF
+                                </Button>
+                                <Button variant="secondary" onClick={() => { setDetailsOpen(false); setSelectedConsult(null); }}>
+                                    Cerrar
+                                </Button>
+                            </Modal.Footer>
+                        </>
+                    ) : (
+                        <div className="p-5 text-center">
+                            <Spinner animation="border" />
+                        </div>
+                    )}
+                </Modal>
             </main>
         </div>
     );

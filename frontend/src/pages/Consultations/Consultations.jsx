@@ -296,9 +296,6 @@ const fetchConsults = async () => {
                       <tr>
                         <th onClick={() => handleSort('nombre')} className="sortable-header">
                           Nombre
-                          {sortField === 'nombre' && (
-                            sortDirection === 'asc' ? <ArrowUpIcon className="ms-1" /> : <ArrowDownIcon className="ms-1" />
-                          )}
                         </th>
                         <th onClick={() => handleSort('fechaCreacion')} className="sortable-header">
                           Fecha
