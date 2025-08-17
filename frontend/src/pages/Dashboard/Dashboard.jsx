@@ -19,7 +19,7 @@ const Dashboard = () => {
     const navigate = useNavigate();
 
     // ====== Estado general ======
-    const [userData, setUserData] = useState(null);
+    const [setUserData] = useState(null);
     const [planName, setPlanName] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -34,12 +34,12 @@ const Dashboard = () => {
     const [processingAudio, setProcessingAudio] = useState(false);
     const [processingSource, setProcessingSource] = useState(null); // 'upload' | 'mic' | null
     const [recordingName, setRecordingName] = useState('');
-    const [consultaId, setConsultaId] = useState(null);
+    const [setConsultaId] = useState(null);
 
     // ====== Resultado mostrado en el dashboard ======
     const [transcription, setTranscription] = useState('');
     const [summary, setSummary] = useState('');
-    const [lastResultSource, setLastResultSource] = useState(null); // 'upload' | 'mic' | null
+    const [setLastResultSource] = useState(null); // 'upload' | 'mic' | null
 
     // ====== Carpetas (UI) ======
     const [folders, setFolders] = useState([
