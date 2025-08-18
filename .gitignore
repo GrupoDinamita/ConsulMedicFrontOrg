@@ -27,3 +27,6 @@ coverage/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+#Package
+frontend/package-lock.json
