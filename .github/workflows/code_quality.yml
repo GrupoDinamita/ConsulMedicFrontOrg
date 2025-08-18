@@ -7,7 +7,7 @@ on:
       - main
       - develop
       - ftr-newApiConfigUpdate
-      - ftr-arreglo-errores
+      - ftr_arreglo_errores
       - 'releases/**'   # patrón para subramas
       - 'hotfix/**'
   pull_request:
