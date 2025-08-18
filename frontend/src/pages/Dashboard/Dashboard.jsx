@@ -67,7 +67,6 @@ const Dashboard = () => {
         throw new Error('Timeout esperando el procesamiento.');
     }
 
-
     useEffect(() => {
         const fetchUserData = async () => {
             try {
@@ -77,7 +76,12 @@ const Dashboard = () => {
                 const profileRes = await fetch(`${API_BASE}/user/profile`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
-                if (!profileRes.ok) throw new Error('No se pudo obtener la información del usuario');
+
+                if (!profileRes.ok) {
+                    console.error('Perfil: respuesta no OK',profileRes.status);
+                    setError('Error al cargar datos del usuario')
+                    return;
+                }
                 setUserData(await profileRes.json());
 
                 const recRes = await fetch(`${API_BASE}/consults`, {
