@@ -32,7 +32,7 @@ const ResetPassword = () => {
             }
         };
 
-        verifyToken();
+        verifyToken().catch((error) => console.error(error));
     }, [token]);
 
     const handleChange = (e) => {

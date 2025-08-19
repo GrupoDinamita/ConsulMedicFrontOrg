@@ -87,7 +87,7 @@ const Profile = () => {
             }
         };
 
-        fetchUserData();
+        fetchUserData().catch((error) => {console.error(error)});
     }, []);
 
     if (loading) {

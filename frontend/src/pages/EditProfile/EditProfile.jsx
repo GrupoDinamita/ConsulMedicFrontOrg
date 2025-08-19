@@ -37,7 +37,7 @@ const EditProfile = () => {
             }
         };
 
-        fetchUserData();
+        fetchUserData().catch((error) => {console.error(error)});
     }, []);
 
     const handleProfileUpdate = async (e) => {
