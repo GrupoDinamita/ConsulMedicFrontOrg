@@ -162,7 +162,9 @@ const Dashboard = () => {
 
             if (!uploadResponse.ok) {
                 const errTxt = await uploadResponse.text().catch(() => '');
-                throw new Error(errTxt || 'Error al subir el archivo');
+                console.error('Error al subir el archivo',uploadResponse.status, errTxt);
+                setError(errTxt || 'Error al subir el archivo')
+                return;
             }
 
             const uploadData = await uploadResponse.json();
@@ -171,7 +173,11 @@ const Dashboard = () => {
                 uploadData.baseFileName ??
                 decodeURIComponent(String(uploadData.uri || '').split('/').pop() || '');
 
-            if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
+            if (!baseFileName) {
+                console.error('No se pudo obtener el nombre del archivo subido.',uploadData);
+                setError('No se pudo obtener el nombre del archivo subido');
+                return;
+            }
 
             const fin = await waitForFinalize(cid, baseFileName, recordingName);
 
