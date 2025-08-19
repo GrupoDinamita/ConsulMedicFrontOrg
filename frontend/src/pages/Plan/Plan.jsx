@@ -34,7 +34,11 @@ const Plan = () => {
                     })
                 ]);
 
-                if (!meRes.ok) throw new Error('No fue posible obtener tu perfil.');
+                if (!meRes.ok) {
+                    console.error('No fue posible obtener tu perfil', meRes.status);
+                    setError('No fue posible obtener tu perfil.');
+                    return;
+                }
                 const me = await meRes.json();
                 const usageJson = usageRes.ok ? await usageRes.json() : null;
 
