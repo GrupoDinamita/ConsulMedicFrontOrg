@@ -95,7 +95,7 @@ const Dashboard = () => {
                 setLoading(false);
             }
         };
-        fetchUserData();
+        void fetchUserData();
     }, [navigate]);
 
     // 🔒 Validación: exigir nombre antes de abrir el file picker
