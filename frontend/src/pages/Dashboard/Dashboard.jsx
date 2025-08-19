@@ -359,7 +359,11 @@ const Dashboard = () => {
             const response = await fetch(`${API_BASE}/consults/${recordingId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('No se pudo obtener la grabación');
+            if (!response.ok) {
+                console.error('No se pudo obtener la grabación',response.status);
+                setError('No se pudo obtener la grabación');
+                return;
+            }
             const data = await response.json();
             setTranscription(data.transcription || '');
             setSummary(data.summary || '');
