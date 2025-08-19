@@ -286,7 +286,11 @@ const Dashboard = () => {
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ nombre: recordingName || '' })
                 });
-                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
+                if (!createRes.ok) {
+                    console.error('No se pudo crear la consulta', createRes.status);
+                    setError('No se pudo obtener la consulta');
+                    return;
+                }
                 const created = await createRes.json(); // { id, nombre }
                 cid = created.id;
                 setConsultaId(cid);
@@ -300,13 +304,21 @@ const Dashboard = () => {
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
-            if (!uploadResponse.ok) throw new Error('Error al subir el audio');
+            if (!uploadResponse.ok) {
+                console.error('Error al subir el audio',uploadResponse.status,);
+                setError('Error al subir el audio');
+                return;
+            }
 
             const uploadData = await uploadResponse.json();
             const baseFileName =
                 uploadData.baseFileName ??
                 decodeURIComponent(String(uploadData.uri || '').split('/').pop());
-            if (!baseFileName) throw new Error('No se pudo obtener el nombre del archivo subido.');
+            if (!baseFileName) {
+                console.error('No se pudo obtener el nombre del archivo subido.',uploadData);
+                setError('No se pudo obtener el nombre del archivo subido.');
+                return;
+            }
 
             const fin = await waitForFinalize(cid, baseFileName, recordingName); // { id, nombre, status }
 
