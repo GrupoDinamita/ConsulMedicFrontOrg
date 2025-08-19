@@ -109,7 +109,7 @@ const Dashboard = () => {
     };
 
     const processUploadedFile = async (file) => {
-        // 🔒 Validación: exigir nombre también si el archivo llega por otra vía
+        // Validación: exigir nombre también si el archivo llega por otra vía
         if (!recordingName.trim()) {
             setError('Primero ingresa un nombre para la consulta.');
             return;
@@ -135,11 +135,19 @@ const Dashboard = () => {
                     },
                     body: JSON.stringify({ nombre: recordingName || '' }),
                 });
-                if (!createRes.ok) throw new Error('No se pudo crear la consulta');
-                const created = await createRes.json();
+                if (!createRes.ok) {
+                    console.error('No se pudo crear la consulta', createRes.status);
+                    setError('Mo se pudo crear la consulta');
+                    return;
+                    }
 
+                const created = await createRes.json();
                 cid = created.id ?? created.Id;
-                if (!cid) throw new Error('La respuesta de creación no devolvió id.');
+                if (!cid) {
+                    console.error('La respuesta de creación no devolvió id.',created);
+                    setError('La respuesta de creación no devolvió id.');
+                    return;
+                }
                 setConsultaId(cid);
             }
 
